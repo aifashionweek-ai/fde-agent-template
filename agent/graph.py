@@ -38,7 +38,11 @@ def plan(s: AgentState):
 
 @node_span("act")
 def act(s: AgentState):
-    budget_guard(s.get("step_count",0), s.get("tool_calls",0))
+    try:
+        budget_guard(s.get("step_count",0), s.get("tool_calls",0))
+    except GuardError as e:                               # D-001/D-007: budget breach is a RESULT, not an outage
+        return {"errors": s.get("errors",[]) + [str(e)],
+                "result": {"answer": f"Stopped: {e}", "confidence": 0.0, "citations": [], "actions": []}}
     msg = llm().bind_tools(TOOLS).invoke(s["messages"])
     tcs = getattr(msg, "tool_calls", []) or []
     return {"messages": [msg], "step_count": s["step_count"]+1, "tool_calls": s.get("tool_calls",0)+len(tcs),
@@ -67,6 +71,7 @@ def finalize(s: AgentState):
 
 def route_after_guard(s): return "finalize" if s.get("result") else "plan"
 def route_after_act(s):
+    if s.get("result"): return "finalize"                 # budget stop
     last = s["messages"][-1]
     if getattr(last, "tool_calls", None):
         return "approval" if s.get("needs_approval") else "tools"

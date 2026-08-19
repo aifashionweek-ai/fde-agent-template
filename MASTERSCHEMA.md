@@ -68,6 +68,7 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | tags      | list | first tag = slice: happy / adversarial / pii / hitl / routing / grounding / calibration |
 
 ## Scorers (evals/scorers.py) — Braintrust; gate.py enforces
+LLM-judge scorers run through the Braintrust AI proxy: add an Anthropic or OpenAI key under Braintrust → Settings → AI Providers (once per org).
 | Scorer            | Type          | Threshold |
 |-------------------|---------------|-----------|
 | schema_valid      | deterministic | 1.00      |
@@ -80,7 +81,6 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | path_sane         | deterministic | 1.00      |
 | confidence_reported | deterministic | 1.00    |
 | Factuality        | LLM-judge     | >= 0.80   |
-| AnswerRelevancy   | LLM-judge     | >= 0.80   |
 | rubric_pass       | LLM-judge     | >= 0.80   |
 | calibration_ECE   | meta          | <= 0.15   |
 | judge_agreement   | meta          | >= 0.80   |

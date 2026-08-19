@@ -53,3 +53,10 @@ def test_extract_retrieved_ids():
     class TM:  # minimal ToolMessage stand-in
         type = "tool"; content = '[{"id":"a#0","text":"x"},{"id":"b#1","text":"y"}]'
     assert extract_retrieved_ids([TM()]) == {"a#0", "b#1"}
+
+def test_budget_breach_is_a_result_not_an_exception(monkeypatch):   # D-001/D-007 (graph-level)
+    import agent.graph as g
+    s = {"messages": [], "step_count": 0, "tool_calls": 999, "errors": [], "path": []}
+    out = g.act.__wrapped__(s) if hasattr(g.act, "__wrapped__") else g.act(s)
+    assert out["result"]["confidence"] == 0.0 and "budget" in out["result"]["answer"].lower() or "max_tool_calls" in out["result"]["answer"]
+    assert g.route_after_act({**s, **out}) == "finalize"

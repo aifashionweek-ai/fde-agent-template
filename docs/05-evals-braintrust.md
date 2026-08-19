@@ -8,6 +8,8 @@ An eval you can't trust is worse than none: it lets you ship regressions with co
 - Seed from the customer's real questions (tickets, search logs, SME interviews), then add the attacks you *expect* (docs/04 §4).
 - Size: 10 rows to start the loop, 50–100 before you trust a number, 300+ for a release gate. Grow from prod traces (§5).
 
+**Setup once per org:** judges call a model via the Braintrust AI proxy → Settings → AI Providers → add an Anthropic/OpenAI key. Without it, deterministic scorers run and judges error.
+
 ## 2. Scorer design (`evals/scorers.py`)
 | Kind | Examples | Threshold | Why |
 |---|---|---|---|
