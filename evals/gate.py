@@ -1,5 +1,6 @@
 """Regression gate: compare an experiment to a baseline against MASTERSCHEMA thresholds.
-Usage: python -m evals.gate <experiment> [baseline]
+Usage: python -m evals.gate <experiment-or-prefix> [baseline-or-prefix]
+Braintrust auto-suffixes names (baseline -> baseline-b6f3006f); a prefix resolves to the NEWEST match.
 Exit 1 if any deterministic scorer < 1.0, any judged scorer below threshold, a slice regresses > 0.05,
 calibration ECE > 0.15, or judge agreement < 0.80. This is what makes "the evals passed" mean something.
 """
@@ -10,24 +11,45 @@ THRESH = {}   # parsed from MASTERSCHEMA "## Scorers" table
 for line in (pathlib.Path(__file__).parent.parent/"MASTERSCHEMA.md").read_text().splitlines():
     m = re.match(r"\|\s*(\w+)\s*\|\s*(deterministic|LLM-judge|meta)\s*\|\s*([<>]=?\s*)?([\d.]+)", line)
     if m: THRESH[m[1]] = (m[2], m[3] or "", float(m[4]))
+JUDGE_ALIASES = {"Factuality": "factual"}   # MASTERSCHEMA name -> scorer function name in Braintrust
 
-def fetch(exp: str):
-    from braintrust import init
-    import braintrust
+def _api():
+    import braintrust, requests
+    key = os.environ["BRAINTRUST_API_KEY"]; base = os.getenv("BRAINTRUST_API_URL", "https://api.braintrust.dev")
+    return requests, base, {"Authorization": f"Bearer {key}"}
+
+def resolve(name: str) -> tuple[str, str]:
+    """Return (experiment_id, experiment_name) for an exact name or the newest experiment starting with prefix."""
+    requests, base, h = _api()
     proj = os.getenv("BRAINTRUST_PROJECT", "fde-agent")
-    e = braintrust.init(project=proj, experiment=exp, open=True)
-    rows = list(e.fetch())
-    return rows
+    r = requests.get(f"{base}/v1/experiment", params={"project_name": proj, "limit": 200}, headers=h, timeout=30).json()
+    exps = [e for e in r.get("objects", []) if e["name"] == name or e["name"].startswith(name + "-") or e["name"].startswith(name)]
+    if not exps: raise SystemExit(f"[gate] no experiment matching '{name}' in project {proj}")
+    exps.sort(key=lambda e: e.get("created", ""), reverse=True)
+    return exps[0]["id"], exps[0]["name"]
+
+def fetch(exp_id: str) -> list[dict]:
+    requests, base, h = _api()
+    rows, cursor = [], None
+    while True:
+        p = {"limit": 500}; 
+        if cursor: p["cursor"] = cursor
+        r = requests.get(f"{base}/v1/experiment/{exp_id}/fetch", params=p, headers=h, timeout=60).json()
+        rows += r.get("events", []); cursor = r.get("cursor")
+        if not cursor or not r.get("events"): break
+    return [e for e in rows if e.get("scores")]   # only scored task rows
 
 def summarize(rows):
     by_slice, conf_pairs, j1, j2 = {}, [], [], []
     for r in rows:
-        sl = (r.get("metadata") or {}).get("slice", "untagged"); sc = r.get("scores") or {}
+        md = r.get("metadata") or {}
+        sl = md.get("slice") or (r.get("tags") or ["untagged"])[0] if isinstance(r.get("tags"), list) and r.get("tags") else md.get("slice", "untagged")
+        sc = r.get("scores") or {}
         by_slice.setdefault(sl, []).append(sc)
         out = r.get("output") or {}
-        if "Factuality" in sc and isinstance(out, dict) and "confidence" in out:
-            conf_pairs.append((float(out["confidence"]), 1.0 if sc["Factuality"] >= 0.5 else 0.0))
-        if "Factuality" in sc and "rubric_pass" in sc: j1.append(sc["Factuality"]); j2.append(sc["rubric_pass"])
+        if "factual" in sc and isinstance(out, dict) and isinstance(out.get("confidence"), (int, float)):
+            conf_pairs.append((float(out["confidence"]), 1.0 if sc["factual"] >= 0.5 else 0.0))
+        if "factual" in sc and "rubric_pass" in sc: j1.append(sc["factual"]); j2.append(sc["rubric_pass"])
     agg = {}
     for sl, lst in by_slice.items():
         keys = set().union(*[s.keys() for s in lst])
@@ -35,22 +57,26 @@ def summarize(rows):
     return agg, calibration_error(conf_pairs), agreement(j1, j2)
 
 def main():
-    exp = sys.argv[1]; base = sys.argv[2] if len(sys.argv) > 2 else None
-    agg, ece, agr = summarize(fetch(exp)); fails = []
-    overall = {k: sum(a[k] for a in agg.values() if k in a) / len(agg) for k in set().union(*agg.values())}
-    for k, (kind, op, t) in THRESH.items():
-        if k in overall and ((kind == "deterministic" and overall[k] < 1.0) or (kind == "LLM-judge" and overall[k] < t)):
-            fails.append(f"{k}={overall[k]:.2f} < {t}")
+    exp_id, exp_name = resolve(sys.argv[1]); base_name = sys.argv[2] if len(sys.argv) > 2 else None
+    rows = fetch(exp_id); agg, ece, agr = summarize(rows); fails = []
+    n = sum(len(v) for v in [[1]*1 for _ in agg])
+    allkeys = set().union(*agg.values()) if agg else set()
+    overall = {k: sum(a[k] for a in agg.values() if k in a) / max(1, sum(1 for a in agg.values() if k in a)) for k in allkeys}
+    for name, (kind, op, t) in THRESH.items():
+        k = JUDGE_ALIASES.get(name, name)
+        if k in overall:
+            if kind == "deterministic" and overall[k] < 1.0: fails.append(f"{k}={overall[k]:.2f} < 1.00")
+            if kind == "LLM-judge" and overall[k] < t: fails.append(f"{k}={overall[k]:.2f} < {t}")
     if ece > 0.15: fails.append(f"calibration ECE {ece} > 0.15")
-    if agr < 0.80: fails.append(f"judge agreement {agr} < 0.80 (rubric ambiguous)")
-    if base:
-        bagg, _, _ = summarize(fetch(base))
+    if agr < 0.80: fails.append(f"judge agreement {agr} < 0.80 (rubric ambiguous — fix the rubric, not the model)")
+    if base_name:
+        bid, bname = resolve(base_name); bagg, _, _ = summarize(fetch(bid))
         for sl in agg:
             for k in agg[sl]:
                 if sl in bagg and k in bagg[sl] and agg[sl][k] < bagg[sl][k] - 0.05:
-                    fails.append(f"slice {sl}/{k} regressed {bagg[sl][k]:.2f}→{agg[sl][k]:.2f}")
-    print(f"[gate] {exp}: ECE={ece} agreement={agr}")
-    for sl, a in agg.items(): print(f"  slice {sl}: " + ", ".join(f"{k}={v:.2f}" for k, v in sorted(a.items())))
+                    fails.append(f"slice {sl}/{k} regressed {bagg[sl][k]:.2f}→{agg[sl][k]:.2f} vs {bname}")
+    print(f"[gate] {exp_name}: rows={len(rows)} ECE={ece} judge_agreement={agr}")
+    for sl, a in sorted(agg.items()): print(f"  slice {sl:12s} " + ", ".join(f"{k}={v:.2f}" for k, v in sorted(a.items())))
     if fails:
         print("[gate] FAIL"); [print("   -", f) for f in fails]; sys.exit(1)
     print("[gate] PASS")
