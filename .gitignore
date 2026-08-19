@@ -4,4 +4,4 @@ __pycache__/
 .pytest_cache/
 .aws-sam/
 *.egg-info/
-.local/
+evals/results/
