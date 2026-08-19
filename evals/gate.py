@@ -43,17 +43,14 @@ def fetch(exp_id: str) -> list[dict]:
     if os.getenv("GATE_DEBUG"):
         import json; print(json.dumps([{k: v for k, v in e.items() if k in ("id","span_id","root_span_id","span_parents","span_attributes","scores","metadata")} for e in rows[:6]], indent=1, default=str))
     def is_task(e):
-        sa = (e.get("span_attributes") or {})
-        if sa.get("type") in ("task", "eval"): return True
-        if sa.get("name") in ("eval", "task", "root"): return True
-        return (not e.get("span_parents")) and "scores" in e and "input" in e and "output" in e
+        # Braintrust: the task row is the ROOT span of its trace (span_id == root_span_id).
+        # Scorer/LLM/tool children have span_parents set and span_attributes.purpose == "scorer" or type in (tool, llm).
+        return e.get("span_id") and e.get("span_id") == e.get("root_span_id") and not e.get("span_parents")
     tasks = [e for e in rows if is_task(e) and e.get("scores")]
-    # de-dup by root span: multiple events may update the same row
-    seen, out = set(), []
+    seen, out = set(), []                       # de-dup: a root row can be emitted more than once (updates)
     for e in sorted(tasks, key=lambda e: str(e.get("created", ""))):
-        key = e.get("root_span_id") or e.get("id")
-        if key in seen: continue
-        seen.add(key); out.append(e)
+        if e["root_span_id"] in seen: continue
+        seen.add(e["root_span_id"]); out.append(e)
     return out
 
 def summarize(rows):
