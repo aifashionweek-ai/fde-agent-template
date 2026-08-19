@@ -37,10 +37,24 @@ def fetch(exp_id: str) -> list[dict]:
         r = requests.get(f"{base}/v1/experiment/{exp_id}/fetch", params=p, headers=h, timeout=60).json()
         rows += r.get("events", []); cursor = r.get("cursor")
         if not cursor or not r.get("events"): break
-    # Keep ROOT task rows only: Braintrust returns every span (scorer calls, LLM calls) as an event.
-    roots = [e for e in rows if not e.get("span_parents") and (e.get("root_span_id") in (None, e.get("span_id")))]
-    roots = [e for e in roots if e.get("scores")]
-    return roots or [e for e in rows if e.get("scores") and (e.get("span_attributes") or {}).get("type") == "eval"]
+    # Keep the TASK rows only. Braintrust returns every span as an event (scorer calls, LLM calls, …).
+    # The eval's task rows are the ones that carry the dataset `input` AND an `output` AND `scores`;
+    # child spans (scorers, model calls) carry their own input/output but not the full score dict.
+    if os.getenv("GATE_DEBUG"):
+        import json; print(json.dumps([{k: v for k, v in e.items() if k in ("id","span_id","root_span_id","span_parents","span_attributes","scores","metadata")} for e in rows[:6]], indent=1, default=str))
+    def is_task(e):
+        sa = (e.get("span_attributes") or {})
+        if sa.get("type") in ("task", "eval"): return True
+        if sa.get("name") in ("eval", "task", "root"): return True
+        return (not e.get("span_parents")) and "scores" in e and "input" in e and "output" in e
+    tasks = [e for e in rows if is_task(e) and e.get("scores")]
+    # de-dup by root span: multiple events may update the same row
+    seen, out = set(), []
+    for e in sorted(tasks, key=lambda e: str(e.get("created", ""))):
+        key = e.get("root_span_id") or e.get("id")
+        if key in seen: continue
+        seen.add(key); out.append(e)
+    return out
 
 def summarize(rows):
     by_slice, conf_pairs, j1, j2 = {}, [], [], []
@@ -62,6 +76,9 @@ def summarize(rows):
 def main():
     exp_id, exp_name = resolve(sys.argv[1]); base_name = sys.argv[2] if len(sys.argv) > 2 else None
     rows = fetch(exp_id); agg, ece, agr = summarize(rows); fails = []
+    expected_rows = len([l for l in (pathlib.Path(__file__).parent/"dataset.jsonl").read_text().splitlines() if l.strip()])
+    if len(rows) < expected_rows:            # a gate must never pass on missing data
+        fails.append(f"only {len(rows)} scored task rows found, dataset has {expected_rows} (run GATE_DEBUG=1 to inspect event shape)")
     n = sum(len(v) for v in [[1]*1 for _ in agg])
     allkeys = set().union(*agg.values()) if agg else set()
     overall = {k: sum(a[k] for a in agg.values() if k in a) / max(1, sum(1 for a in agg.values() if k in a)) for k in allkeys}
