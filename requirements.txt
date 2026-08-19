@@ -1,0 +1,18 @@
+langgraph>=0.2
+langchain-core>=0.3
+langchain-anthropic
+langchain-aws
+langchain-huggingface
+langsmith
+braintrust
+autoevals
+pydantic>=2
+fastapi
+uvicorn
+mangum
+boto3
+pytest
+python-dotenv
+openai              # optional: embeddings for hybrid retrieval (EMBED_PROVIDER=openai)
+huggingface_hub     # deploy/hf_endpoint.py
+# optional guard layers (docs/04-guardrails.md): presidio-analyzer presidio-anonymizer transformers torch requests

@@ -1,0 +1,20 @@
+[
+  {
+    "name": "search_kb",
+    "side_effect": false,
+    "approval": false,
+    "timeout": 10
+  },
+  {
+    "name": "calculate",
+    "side_effect": false,
+    "approval": false,
+    "timeout": 2
+  },
+  {
+    "name": "write_record",
+    "side_effect": true,
+    "approval": true,
+    "timeout": 10
+  }
+]

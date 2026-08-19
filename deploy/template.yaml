@@ -1,0 +1,35 @@
+# AWS SAM — Lambda + HTTP API. `sam build && sam deploy --guided`
+# Default: direct Anthropic key from Secrets Manager (mirrors prod pattern). Set LlmProvider=bedrock for in-VPC traffic.
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  LlmProvider:   { Type: String, Default: anthropic, AllowedValues: [anthropic, bedrock, hf] }
+  ModelProfile:  { Type: String, Default: claude-sonnet-api }
+  BedrockModelId:{ Type: String, Default: us.anthropic.claude-sonnet-4-5-20250929-v1:0 }
+  AnthropicSecretArn: { Type: String, Default: "" , Description: "Secrets Manager ARN holding ANTHROPIC_API_KEY (anthropic provider)" }
+  Tenant:        { Type: String, Default: demo }
+Conditions:
+  UseSecret: !Not [!Equals [!Ref AnthropicSecretArn, ""]]
+Globals:
+  Function: { Timeout: 120, MemorySize: 1024, Runtime: python3.12 }
+Resources:
+  AgentFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: api.main.handler
+      Environment:
+        Variables:
+          LLM_PROVIDER: !Ref LlmProvider
+          MODEL_PROFILE: !Ref ModelProfile
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          TENANT: !Ref Tenant
+          LANGSMITH_TRACING: "true"
+          ANTHROPIC_SECRET_ARN: !Ref AnthropicSecretArn
+      Policies:
+        - Statement: [{Effect: Allow, Action: ["bedrock:InvokeModel","bedrock:InvokeModelWithResponseStream","bedrock:ApplyGuardrail"], Resource: "*"}]
+        - !If [UseSecret, {Statement: [{Effect: Allow, Action: ["secretsmanager:GetSecretValue"], Resource: !Ref AnthropicSecretArn}]}, !Ref "AWS::NoValue"]
+      Events:
+        Api: { Type: HttpApi, Properties: { Path: /{proxy+}, Method: ANY } }
+Outputs:
+  ApiUrl: { Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/" }
