@@ -16,5 +16,35 @@
     "side_effect": true,
     "approval": true,
     "timeout": 10
+  },
+  {
+    "name": "http_get",
+    "side_effect": false,
+    "approval": false,
+    "timeout": 6
+  },
+  {
+    "name": "sql_query",
+    "side_effect": false,
+    "approval": false,
+    "timeout": 6
+  },
+  {
+    "name": "recall_memory",
+    "side_effect": false,
+    "approval": false,
+    "timeout": 3
+  },
+  {
+    "name": "remember",
+    "side_effect": true,
+    "approval": true,
+    "timeout": 5
+  },
+  {
+    "name": "human_handoff",
+    "side_effect": true,
+    "approval": true,
+    "timeout": 5
   }
 ]

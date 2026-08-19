@@ -36,5 +36,8 @@ Only *after* those are fixed do you compare quality — **on your own golden set
 3. Set `quality_tier` in `REGISTRY` from *that*, commit the numbers in a `docs/model-eval-<date>.md` table.
 4. Re-run quarterly or on any model version bump — tiers drift.
 
-## 5. Interview line
+## 5. Open weights on Bedrock — selection, not deployment
+Bedrock serves open-weight models (DeepSeek V3.2, Qwen3, Kimi K2.5, GLM, Mistral/Ministral, gpt-oss, Llama, Gemma…) serverlessly, per token, inside the customer account. You don't deploy them; you pick a model ID. SageMaker/Custom Model Import earn their place only for (a) a model not in the catalog or (b) your own fine-tuned weights. Tool use is supported on the 2025–26 wave (Llama 3.1+, Mistral Large, DeepSeek, Qwen3, Kimi…) — avoid the old ones (Llama 3, Mistral 7B/Mixtral). IDs and region availability vary: `aws bedrock list-foundation-models --region us-west-2 --by-output-modality TEXT --query 'modelSummaries[].modelId'` the night before, set the `BEDROCK_*_ID` envs, and `scripts/model_bakeoff.sh` turns the choice into a table.
+
+## 6. Interview line
 "I separate *can we use it* (residency, license, cost, latency) from *is it good* (our evals). The registry makes the first part a lookup and the second part a number we measured. Default is frontier-closed through the most compliant path; open weights earn their place per slice, on our data."

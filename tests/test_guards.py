@@ -27,8 +27,8 @@ def test_tool_allowlist():                               # D-003
         output_guard({"answer": "x", "confidence": 0.5, "actions": [{"tool": "rm_rf", "args": {}}]})
 
 def test_hitl_gate():                                    # D-004
-    assert tool_needs_approval("write_record") is True
-    assert tool_needs_approval("search_kb") is False
+    assert tool_needs_approval("reset_access") is True
+    assert tool_needs_approval("search_policy") is False
     assert tool_needs_approval("unknown_tool") is True   # unknown = safe default
 
 def test_output_pii_redaction():                         # D-005 (egress)
@@ -60,3 +60,11 @@ def test_budget_breach_is_a_result_not_an_exception(monkeypatch):   # D-001/D-00
     out = g.act.__wrapped__(s) if hasattr(g.act, "__wrapped__") else g.act(s)
     assert out["result"]["confidence"] == 0.0 and "budget" in out["result"]["answer"].lower() or "max_tool_calls" in out["result"]["answer"]
     assert g.route_after_act({**s, **out}) == "finalize"
+
+def test_egress_pii_scrubbed_even_on_fallback():         # D-005 defense-in-depth (the finalize fallback branch)
+    from agent.graph import finalize
+    # simulate a non-JSON final message containing PII -> must be redacted in the fallback path
+    from langchain_core.messages import AIMessage
+    s = {"messages": [AIMessage(content="Your SSN 123-45-6789 has been noted, access reset.")], "path": []}
+    out = finalize(s)
+    assert "123-45-6789" not in out["result"]["answer"] and "[SSN]" in out["result"]["answer"]

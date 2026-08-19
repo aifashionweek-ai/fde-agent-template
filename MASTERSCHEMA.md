@@ -28,6 +28,19 @@
 | search_kb       | no          | no       | 10s     |
 | calculate       | no          | no       | 2s      |
 | write_record    | YES         | YES      | 10s     |
+| http_get        | no          | no       | 6s      |
+| sql_query       | no          | no       | 6s      |
+| recall_memory   | no          | no       | 3s      |
+| remember        | YES         | YES      | 5s      |
+| human_handoff   | YES         | YES      | 5s      |
+
+## Memory (agent/memory.py) — three kinds
+| Kind | Scope | Lifetime | Backend | Row |
+|------|-------|----------|---------|-----|
+| short-term / working | thread_id | one thread (checkpointed) | LangGraph checkpointer | — |
+| long-term / semantic | (tenant, user) | across sessions | Store (JSON demo / Postgres / vector) | D-016 |
+| episodic | (tenant, user) | across sessions | same Store, kind=episodic | D-016 |
+Isolation is structural (tenant+user filter before ranking); provenance + TTL on every item; forget() deletes by key or scope (D-017). Writes are approval-gated (D-018).
 
 ## Model registry (agent/models.py) — tiers come from YOUR evals, not vendor claims
 | Profile               | Provider  | Weights | Residency    | Cost | Latency | Quality | Good for |

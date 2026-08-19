@@ -8,7 +8,8 @@
 | Layer | What's in the box | Why it matters to a customer |
 |---|---|---|
 | **Agent** | LangGraph `guard_input → plan → act ⇄ tools → [approval] → finalize`, typed state, hard termination | bounded, resumable, human-in-the-loop on anything with a blast radius |
-| **Model** | registry + constraint-driven `select_model` (Anthropic API · **Bedrock** in-VPC · **Hugging Face** open weights) | residency/license/cost decide *can we*; your evals decide *is it good* |
+| **Model** | registry + constraint-driven `select_model` (Anthropic API · **Bedrock**, incl. serverless open weights: DeepSeek, Qwen3, Kimi, Ministral, gpt-oss · **Hugging Face** endpoints) + `scripts/model_bakeoff.sh` | *shortlist on Hugging Face, serve on Bedrock, decide with Braintrust* — residency/license/cost decide *can we*; your evals decide *is it good* |
+| **Memory** | three kinds: short-term (checkpointed thread), long-term semantic + episodic (`agent/memory.py`, tenant+user scoped, injected before planning, approval-gated writes) | agents that remember safely across sessions — structurally isolated, forgettable |
 | **Data** | routed retrieval: provenance on every chunk, **tenant isolation + sensitivity ceiling before scoring**, hybrid BM25+embeddings, citations only from retrieved ids | multi-tenant RAG that can't leak by construction |
 | **Guardrails** | 6 layers: regex → Presidio → Prompt-Guard/Lakera → Bedrock Guardrails → output grounding + egress PII → human | deterministic where possible, judged where necessary, humans on the residual |
 | **Evals** | Braintrust: deterministic invariants at 1.0, two LLM judges with agreement, **calibration (ECE)**, per-slice regression **gate** | "the evals passed" means something |
@@ -22,6 +23,7 @@ make setup                 # deps + .env
 make check                 # update.py: regenerate registry, drift checks, 29 catch-proven tests
 make run                   # http://localhost:8080/docs  → POST /run {"task":"Summarize the refund policy","tenant":"demo"}
 EXPERIMENT=baseline make evals && make gate EXP=baseline
+scripts/model_bakeoff.sh claude-sonnet-api claude-haiku-api deepseek-v3.2-bedrock   # one command, one table
 ```
 Works with no keys for `make check`. Add `ANTHROPIC_API_KEY` (or run `make preflight` for Bedrock) for `/run` and evals.
 
@@ -48,6 +50,7 @@ Works with no keys for `make check`. Add `ANTHROPIC_API_KEY` (or run `make prefl
 | [07 · Deploying open weights](docs/07-huggingface-deploy.md) | HF Inference Endpoints vs TGI/vLLM vs SageMaker vs Bedrock; sizing; gotchas |
 | [08 · Tuning](docs/08-tuning.md) | the ladder (prompt → retrieval → tools → model → fine-tune), one change per experiment, drift |
 | [09 · FDE playbook](docs/09-fde-playbook.md) | discovery → shadow → HITL ramp → rollout gates → what you leave behind |
+| [10 · Agentic memory](docs/10-agentic-memory.md) | the three memory kinds, how each is implemented, memory-as-customer-data, scaling |
 | [Architecture](docs/ARCHITECTURE.md) | diagram + request/data/model/governance paths |
 
 ## Governance in one picture
@@ -70,7 +73,7 @@ docs/    01–09 playbooks · ARCHITECTURE.md · DEMO-TEMPLATE.md
 ```
 
 ## The one-paragraph pitch
-It's a LangGraph agent behind a FastAPI endpoint. Every request passes a layered input guard, gets planned, then runs a bounded plan-act loop against an allowlisted tool set, pausing for human approval on side effects. Retrieval is routed — tenant, sensitivity, source — before anything is ranked, and only retrieved ids can be cited; the output is schema-validated and grounding-checked before it leaves. The model is a profile chosen by constraints — Anthropic by default, Bedrock when traffic must stay in the customer's account, open weights on Hugging Face when a narrow task or residency demands it. Every run is traced in LangSmith with its path and tenant, and scored in Braintrust against a golden set with calibration and judge-agreement checks; a regression gate blocks the deploy. It's governed by a MANIFEST of directives, a MASTERSCHEMA of contracts, and an `update.py` that refuses to pass unless the guards do.
+It's a LangGraph agent behind a FastAPI endpoint. Every request passes a layered input guard, gets planned, then runs a bounded plan-act loop against an allowlisted tool set (search, calculate, http_get, sql_query, recall_memory, write_record, remember, human_handoff), pausing for human approval on side effects. Retrieval is routed — tenant, sensitivity, source — before anything is ranked, and only retrieved ids can be cited; the output is schema-validated and grounding-checked before it leaves. The model is a profile chosen by constraints — Anthropic by default, Bedrock when traffic must stay in the customer's account, open weights on Hugging Face when a narrow task or residency demands it. Every run is traced in LangSmith with its path and tenant, and scored in Braintrust against a golden set with calibration and judge-agreement checks; a regression gate blocks the deploy. It's governed by a MANIFEST of directives, a MASTERSCHEMA of contracts, and an `update.py` that refuses to pass unless the guards do.
 
 ---
-MIT · built by [Jaswant Tawdekar](https://github.com/aifashionweek-ai) — the same governance pattern runs the production platform at aifashionweek.ai.
+MIT · built by [Jaswant Tawdekar](https://github.com/jaswanttawdekar) — the same governance pattern runs the production platform at aifashionweek.ai.
