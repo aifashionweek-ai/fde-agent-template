@@ -37,13 +37,16 @@ def fetch(exp_id: str) -> list[dict]:
         r = requests.get(f"{base}/v1/experiment/{exp_id}/fetch", params=p, headers=h, timeout=60).json()
         rows += r.get("events", []); cursor = r.get("cursor")
         if not cursor or not r.get("events"): break
-    return [e for e in rows if e.get("scores")]   # only scored task rows
+    # Keep ROOT task rows only: Braintrust returns every span (scorer calls, LLM calls) as an event.
+    roots = [e for e in rows if not e.get("span_parents") and (e.get("root_span_id") in (None, e.get("span_id")))]
+    roots = [e for e in roots if e.get("scores")]
+    return roots or [e for e in rows if e.get("scores") and (e.get("span_attributes") or {}).get("type") == "eval"]
 
 def summarize(rows):
     by_slice, conf_pairs, j1, j2 = {}, [], [], []
     for r in rows:
         md = r.get("metadata") or {}
-        sl = md.get("slice") or (r.get("tags") or ["untagged"])[0] if isinstance(r.get("tags"), list) and r.get("tags") else md.get("slice", "untagged")
+        sl = md.get("slice") or ((r.get("tags") or ["untagged"])[0] if isinstance(r.get("tags"), list) and r.get("tags") else "untagged")
         sc = r.get("scores") or {}
         by_slice.setdefault(sl, []).append(sc)
         out = r.get("output") or {}
