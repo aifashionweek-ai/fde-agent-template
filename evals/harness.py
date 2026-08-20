@@ -44,9 +44,16 @@ def run_dataset(experiment: str = None) -> dict:
     for d in data:
         inp, expected = d["input"], d["expected"]
         slice_ = (d.get("tags") or ["untagged"])[0]
-        r = run(inp, thread_id=f"eval-{abs(hash(inp))}")
-        out = r if "answer" in r else {"answer": "INTERRUPTED (needs approval)", "confidence": 0.0,
-                                       "citations": [], "actions": [], "trace": {"path": r.get("path", [])}}
+        try:
+            r = run(inp, thread_id=f"eval-{abs(hash(inp))}")
+            out = r if "answer" in r else {"answer": "INTERRUPTED (needs approval)", "confidence": 0.0,
+                                           "citations": [], "actions": [], "trace": {"path": r.get("path", [])}}
+        except Exception as e:
+            # A model that fails mid-run (e.g. an open model that can't hold the tool-call format) is a
+            # SCORED FAILURE, not a crashed bake-off. This is itself a finding worth showing. (J-05 honest.)
+            out = {"answer": f"ERROR: {type(e).__name__}: {e}", "confidence": 0.0, "citations": [],
+                   "actions": [], "trace": {"path": [], "error": str(e)}}
+            print(f"  [{slice_:11s}] MODEL ERROR (recorded as failure): {type(e).__name__}: {str(e)[:80]}")
         scores = {name: fn(output=out, input=inp, expected=expected) for name, fn in DET_SCORERS.items()}
         for name, judge in judges.items():
             try:
