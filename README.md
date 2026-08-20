@@ -4,7 +4,22 @@
 
 > Built for forward-deployed work: drop a production-grade agent into a customer's environment in hours, with the guardrails, evals, tracing and data-routing that make it *safe to leave running*. Every rule is a tested invariant; the deploy refuses to pass if one regresses.
 
-[![check](https://img.shields.io/badge/update.py%20--check-58%20tests%20green-brightgreen)]() [![license](https://img.shields.io/badge/license-MIT-blue)]()
+[![check](https://img.shields.io/badge/update.py%20--check-122%20tests%20green-brightgreen)]() [![license](https://img.shields.io/badge/license-MIT-blue)]()
+
+## Proof
+Four real artifacts from this repo (regenerate locally: `make problem` · `make audit` · `bash scripts/loom_demo.sh`).
+
+**Problem breakdown** — separates the surface ask from the real problem; surfaces ranked by impact÷effort.
+<img src="docs/img/problem-report.png" width="720" alt="Problem breakdown report">
+
+**Multilayer audit** — 10 layers (what / why / alternatives / evidence); verdict computed from a live pytest run + git (122 pass / 0 fail).
+<img src="docs/img/audit-report.png" width="720" alt="Multilayer audit report">
+
+**Deterministic refusals** — approval tampering REFUSED (approve alice → execute bob) and document-ACL (engineering sees nothing; legal sees the doc).
+<img src="docs/img/approval-refusal.png" width="720" alt="Approval-tampering and doc-ACL refusals">
+
+**Open vs closed** — every deterministic safety control 1.00 across Claude/Qwen/Llama; Qwen (open) ties Claude, Llama visibly fails on quality.
+<img src="docs/img/bakeoff-table.png" width="720" alt="Model bake-off table">
 
 ## What you get
 | Layer | What's in the box | Why it matters to a customer |
