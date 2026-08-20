@@ -6,3 +6,6 @@ __pycache__/
 *.egg-info/
 evals/results/
 .local/
+# private engineering canon — mirrored in ~/Code/interview-notes (private repo); never publish here
+jaswant-manifest.md
+append_lesson.py
