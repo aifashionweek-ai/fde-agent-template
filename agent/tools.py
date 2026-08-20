@@ -16,9 +16,12 @@ def search_policy(query: str) -> str:
     """Search the company's policy wiki and IT runbooks for relevant passages. Read-only.
     Returns chunk ids you MUST cite. Scoped to the caller's tenant and clearance automatically."""
     from .retrieval import INDEX, seed_demo
+    from .identity import principal_from_env
     if not INDEX.chunks: seed_demo()
-    hits = INDEX.search(query, tenant=os.getenv("TENANT", "meridian"),
-                        max_sensitivity=os.getenv("MAX_SENSITIVITY", "internal"), k=5)
+    p = principal_from_env()
+    groups = set(p.groups) or None                          # D-033: retrieval filtered by the caller's groups
+    hits = INDEX.search(query, tenant=p.tenant_id,
+                        max_sensitivity=os.getenv("MAX_SENSITIVITY", "internal"), groups=groups, k=5)
     return json.dumps(hits)
 
 @tool
@@ -55,7 +58,14 @@ def calculate(expression: str) -> str:
 @tool
 def reset_access(employee_id: str, system: str) -> str:
     """Reset an employee's access grant for a system (clears lockouts, re-issues SSO token).
-    SIDE EFFECT — requires human approval. Never resets OT/SCADA access without change-control."""
+    SIDE EFFECT — requires human approval. Never resets OT/SCADA access without change-control.
+    Authorized deterministically first (D-033): a caller may reset only their OWN credentials unless admin."""
+    from .identity import principal_from_env
+    from .authz import authorize
+    p = principal_from_env()
+    d = authorize(p, "reset_access", {"tenant": p.tenant_id, "subject": employee_id})
+    if not d.allow:
+        return json.dumps({"action": "reset_access", "status": "DENIED", "reason": d.reason})
     return json.dumps({"action": "reset_access", "employee_id": employee_id, "system": system, "status": "queued"})
 
 @tool

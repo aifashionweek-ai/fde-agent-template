@@ -54,6 +54,13 @@ class _BM25:
 
 def _tok(s: str) -> list[str]: return re.findall(r"[a-z0-9]+", s.lower())
 
+def _group_ok(chunk: "Chunk", groups: Optional[set[str]]) -> bool:
+    """Document-level ACL (D-033): a chunk tagged with allowed_groups is visible ONLY to a caller whose
+    groups intersect it. A chunk with no allowed_groups is open (tenant + sensitivity still apply)."""
+    acl = (chunk.meta or {}).get("allowed_groups")
+    if not acl: return True
+    return bool(groups and (set(acl) & set(groups)))
+
 class InMemoryIndex:
     """Hybrid index. Embeddings are optional (EMBED_PROVIDER=openai|none); BM25 always on."""
     def __init__(self): self.chunks: list[Chunk] = []; self._bm25 = None; self._emb: list[list[float]] | None = None
@@ -65,11 +72,12 @@ class InMemoryIndex:
         r = OpenAI().embeddings.create(model=os.getenv("EMBED_MODEL", "text-embedding-3-small"), input=texts)
         return [d.embedding for d in r.data]
     def search(self, query: str, *, tenant: str, max_sensitivity: str = "internal",
-               sources: Optional[set[str]] = None, k: int = 5) -> list[dict]:
+               sources: Optional[set[str]] = None, groups: Optional[set[str]] = None, k: int = 5) -> list[dict]:
         lvl = SENSITIVITY[max_sensitivity]
-        # ROUTING: tenant + sensitivity + source allow-list applied BEFORE scoring (D-011).
+        # ROUTING: tenant + sensitivity + source + group ACL applied BEFORE scoring (D-011, D-033).
         idx = [i for i, c in enumerate(self.chunks)
-               if c.tenant == tenant and SENSITIVITY[c.sensitivity] <= lvl and (sources is None or c.source in sources)]
+               if c.tenant == tenant and SENSITIVITY[c.sensitivity] <= lvl and (sources is None or c.source in sources)
+               and _group_ok(c, groups)]
         if not idx: return []
         q = _tok(query); lex = {i: self._bm25.score(q, i) for i in idx}
         mx = max(lex.values()) or 1.0; scores = {i: lex[i] / mx for i in idx}
@@ -130,12 +138,13 @@ class PineconeIndex:
         self.chunks.extend(chunks)
 
     def search(self, query: str, *, tenant: str, max_sensitivity: str = "internal",
-               sources: Optional[set[str]] = None, k: int = 5) -> list[dict]:
+               sources: Optional[set[str]] = None, groups: Optional[set[str]] = None, k: int = 5) -> list[dict]:
         lvl = SENSITIVITY[max_sensitivity]
-        # ROUTING (D-011): tenant = namespace (isolation); sensitivity ceiling + source allow-list are
-        # metadata filters applied BY the store at query time — never a post-hoc soft filter that can leak.
+        # ROUTING (D-011, D-033): tenant = namespace (isolation); sensitivity ceiling + source allow-list +
+        # group ACL are metadata filters applied BY the store at query time — never a post-hoc soft filter.
         flt: dict = {"sensitivity_level": {"$lte": lvl}}
         if sources is not None: flt["source"] = {"$in": sorted(sources)}
+        if groups: flt["allowed_groups"] = {"$in": sorted(groups)}   # doc ACL: chunk's allowed_groups ∩ caller groups
         qv = self._embed([query])[0]
         res = self._client().query(vector=qv, top_k=k, namespace=tenant, filter=flt, include_metadata=True)
         matches = getattr(res, "matches", None)

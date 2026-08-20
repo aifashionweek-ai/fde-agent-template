@@ -31,3 +31,4 @@ class AgentState(TypedDict, total=False):
     needs_approval: bool
     errors: list[str]
     path: list[str]              # node sequence, D-013 (trace path)
+    principal: Optional[dict]    # who is calling (identity.Principal.as_claims()); authz uses it, D-033

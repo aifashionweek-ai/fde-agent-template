@@ -64,6 +64,13 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | scoring       | BM25 always; + cosine on embeddings if EMBED_PROVIDER set (hybrid 50/50) | — |
 | citations     | only returned chunk ids are legal citations   | D-012 |
 
+## Identity & authorization (agent/identity.py, agent/authz.py) — the CONTROL plane
+| Piece | What | Notes |
+|-------|------|-------|
+| Principal | user_id, tenant_id, roles, groups | parsed from verified OIDC/JWT claims upstream; into AgentState (D-033) |
+| authorize(principal, action, resource) | DETERMINISTIC allow/deny — never the LLM | tenant isolation · self-only reset (unless admin) · no self-approval of privileged · retrieve ≤ clearance ∧ group ACL |
+| enforcement | tools call authorize() before acting; retrieval filters by `groups` | trust boundary: gateway authenticates, this layer enforces per-principal |
+
 ## Ingestion (agent/ingest.py) — the stage before retrieval
 | Step | What | Notes |
 |------|------|-------|

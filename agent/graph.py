@@ -26,11 +26,14 @@ def guard_input(s: AgentState):
         clean = input_guard(s["task"])
     except GuardError as e:
         return {"errors": [str(e)], "result": {"answer": f"Refused: {e}", "confidence": 0.0, "citations": [], "actions": []}}
-    tenant, user = os.getenv("TENANT", "demo"), os.getenv("USER_ID", "anon")
+    from .identity import principal_from_env
+    principal = principal_from_env()                              # D-033: who is calling (from the auth'd gateway)
+    tenant, user = principal.tenant_id, principal.user_id
     mem = recall_context(tenant, user, clean)                     # D-016: long-term memory injected as context
     msgs = [SystemMessage(SYSTEM.format(task_context=os.getenv("TASK_CONTEXT","general"))), HumanMessage(clean)]
     if mem: msgs.insert(1, SystemMessage(mem))
-    return {"task": clean, "step_count": 0, "tool_calls": 0, "errors": [], "messages": msgs}
+    return {"task": clean, "step_count": 0, "tool_calls": 0, "errors": [],
+            "principal": principal.as_claims(), "messages": msgs}
 
 @node_span("plan")
 def plan(s: AgentState):
