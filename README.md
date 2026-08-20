@@ -103,6 +103,22 @@ sensitivity routing, tracing, the eval gate, and the MANIFEST→test governance.
 **Demo-scale by design**: corpus size and the in-memory index — swapped by env, no code change. The point of
 the template is that the *governance* is production-grade on day one; the *data plane* grows into the customer's.
 
+Two limitations named on purpose (a credibility signal, not a gap discovered later):
+- **LangSmith is observability, not a compliance audit log.** It's for debugging and turning traces into
+  eval rows. A regulated deployment additionally needs an **append-only, retained** audit record (who
+  approved what, when) — a separate durable store, not a tracing dashboard.
+- **The 4-tier sensitivity model is a simplification of real per-document / per-group ACLs.** Production
+  content stores (SharePoint/Confluence) carry per-item ACLs; the ingestion-lifecycle build adds
+  document-level `allowed_groups`, but **tiers ≠ a full ACL system** — a real deployment maps the customer's
+  existing ACLs onto retrieval's filter.
+
+## Trust boundary
+This template enforces isolation **inside** an authenticated boundary. The `tenant` / principal claim is
+assumed to arrive from an **authenticated gateway** (OIDC/JWT) that has already verified the caller — in
+production the gateway authenticates, and the authz layer (`agent/authz.py`) enforces per-principal
+permissions (tenant, roles, groups) on every tool call and retrieval. This repo does **not** implement the
+IdP/token-signature verification itself; it assumes that upstream and enforces everything downstream of it.
+
 ## Document ingestion — real, not a demo stub
 `agent/ingest.py` parses real enterprise documents with **Unstructured.io** (Apache-2.0, the library
 production RAG teams use): `partition()` auto-detects PDF/DOCX/HTML/PPTX/images → strip header/footer

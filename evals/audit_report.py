@@ -139,7 +139,7 @@ LAYERS = [
    evidence_keys=["hitl_respected","tool_allowlist","within_budget"], manifest=["D-003","D-004","D-007"]),
  dict(id="L5", name="Model Selection (open vs closed)", icon="⚖️",
    what="Constraint-driven registry: select_model(task, residency, cost, quality, license). Anthropic API + Bedrock (Claude closed; Qwen/Llama open, in-account) + HF. Fine-tune path via LoRA + Bedrock Custom Model Import.",
-   why="Separate 'can we use it' (residency/license/cost) from 'is it good' (our evals). Default frontier-closed via the most compliant path; open weights earn their place per slice, measured.",
+   why="The governance layer bounds worst-case behavior INDEPENDENT of model choice — the deterministic controls run outside the model and hold across Claude/Qwen/Llama — so model selection is a pure quality/cost/residency decision, not a safety one. Separate 'can we use it' (residency/license/cost) from 'is it good' (our evals).",
    alts="One hardcoded model (no residency story) · always-open (quality risk on reasoning) · always-closed (cost, lock-in, no in-account option for regulated data).",
    evidence_keys=[], manifest=["D-008","D-009"], bakeoff=True),
  dict(id="L6", name="Tracing", icon="📡",

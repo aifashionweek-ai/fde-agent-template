@@ -1,10 +1,12 @@
 # Model Bake-off — Enterprise IT-Ops agent · 2026-08-19
 
-**Headline:** the deterministic *safety controls are model-independent* — schema, PII, grounding, HITL,
-tenant isolation, budget all pass 1.00 across Claude, Qwen3, and Llama3.3. On answer *quality* the best
-open model (Qwen3-32B) **ties** the closed model (Claude), while the weaker open model (Llama3.3) **visibly
-fails** (it emitted raw tool-call JSON as its final answer on several rows). So **model choice here is a
-quality decision, not a safety one** — governance holds regardless of which model you run.
+**Headline:** the governance layer **bounds worst-case behavior independent of model choice.** The
+deterministic controls (schema, PII, grounding, HITL, tenant isolation, budget) run *outside* the model and
+passed 1.00 across Claude, Qwen3, and Llama3.3 — note this tests the wrapper, not the model's "virtue," and
+that is exactly the point: the wrapper is what makes the worst case safe. So model selection becomes a
+**pure quality / cost / residency decision**: on quality the best open model (Qwen3-32B) **ties** closed
+(Claude), while the weaker open model (Llama3.3) **visibly fails** — it emitted raw tool-call JSON as its
+final answer on several rows, which the judge correctly scores 0.
 
 Same governed agent, same golden set, three models. Deterministic scorers are invariants (must be 1.00); judge scores measure nuanced quality.
 
@@ -36,7 +38,7 @@ correct-but-verbose answer — e.g. `17 × 23 = 391` vs gold `391` — at 0.60. 
 
 ## Finding
 
-**Every deterministic safety scorer is 1.00 across all three models** — schema, PII redaction, grounding, HITL, tenant isolation, budget. The governance layer makes the models interchangeable on the things that must not fail. A residency-constrained customer can run open weights (Qwen/Llama) in-account via Bedrock with zero loss on safety.
+**Every deterministic control is 1.00 across all three models** — schema, PII redaction, grounding, HITL, tenant isolation, budget. Because these controls live in the wrapper, not the model, the governance layer **bounds worst-case behavior independent of model choice**: a residency-constrained customer can run open weights (Qwen/Llama) in-account via Bedrock and the tested invariants still hold. Model choice then trades only on quality / cost / residency — never on the safety floor.
 
 The differences are in judge-scored quality. With the corrected judge, **Claude (closed) and Qwen3-32B (open) tie at factual 1.00 / rubric 0.90** — a residency-bound customer loses nothing on nuanced quality by running Qwen open-weights in-account. **Llama3.3-70B is genuinely weaker (0.48 / 0.30)**: on several rows it emitted a raw tool-call JSON blob as its final answer instead of completing the ReAct loop, which the judge correctly scores 0 (a real failure, not a rubric artifact — the fix still fails wrong answers). That is the real, measured open-vs-closed picture: the best open model matches closed on this task; a weaker open model does not — and the governance holds for all three either way.
 
