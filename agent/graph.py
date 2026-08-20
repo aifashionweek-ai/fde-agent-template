@@ -9,6 +9,7 @@ from langgraph.types import interrupt
 from .state import AgentState
 from .llm import get_llm
 from .tools import TOOLS, tool_needs_approval
+from .approval import approve_calls, classify_execution
 from .guards import input_guard, budget_guard, output_guard, extract_retrieved_ids, redact_pii, GuardError
 from .tracing import tag_run, node_span
 from .prompts import SYSTEM, PLANNER
@@ -56,15 +57,23 @@ def act(s: AgentState):
     return {"messages": [msg], "step_count": s["step_count"]+1, "tool_calls": s.get("tool_calls",0)+len(tcs),
             "needs_approval": any(tool_needs_approval(tc["name"]) for tc in tcs)}
 
+def _principal_ids(s):
+    p = s.get("principal") or {}
+    return p.get("user_id", "anon"), p.get("tenant_id", "demo"), s.get("run_id", "default")
+
 @node_span("approval")
-def approval(s: AgentState):                            # D-004 human-in-the-loop
+def approval(s: AgentState):                            # D-004 human-in-the-loop + D-034 approval integrity
     last = s["messages"][-1]
+    uid, tenant, run_id = _principal_ids(s)
+    # bind approval to the EXACT proposed actions (their proposal hashes), not just "yes to something"
+    hashes = approve_calls(last.tool_calls, uid, tenant, run_id, tool_needs_approval)
+    approved = list(set(s.get("approved", [])) | hashes)
     if os.getenv("DEMO_AUTOAPPROVE") == "1":            # smooth demos only; real deployments keep this off
-        return {"needs_approval": False, "path": s.get("path", []) + ["approval(auto)"]}
+        return {"needs_approval": False, "approved": approved, "path": s.get("path", []) + ["approval(auto)"]}
     decision = interrupt({"pending_tool_calls": last.tool_calls, "question": "Approve side-effect tool call(s)?"})
     if decision is not True:
         return {"messages": [ToolMessage(content="Denied by human.", tool_call_id=tc["id"]) for tc in last.tool_calls], "needs_approval": False}
-    return {"needs_approval": False}
+    return {"needs_approval": False, "approved": approved}
 
 @node_span("finalize")
 def finalize(s: AgentState):
@@ -91,15 +100,26 @@ def route_after_approval(s):
     return "tools" if getattr(last, "tool_calls", None) else "act"
 
 def traced_tools(s: AgentState):
-    """Wrap ToolNode so the tool names land in the trace path (D-013). Prebuilt ToolNode can't be
-    decorated, so we call it and append 'tools[search_policy,reset_access]' to the path."""
+    """Wrap ToolNode so tool names land in the trace path (D-013) AND enforce approval integrity +
+    idempotency (D-034): a side-effect call executes only if its proposal hash was approved and hasn't run
+    before. An unapproved/args-changed call is REFUSED; a replay is an idempotent skip. Read tools pass through."""
     global _tool_node
     if _tool_node is None: _tool_node = ToolNode(TOOLS)
-    called = [tc["name"] for tc in getattr(s["messages"][-1], "tool_calls", []) or []]
-    out = _tool_node.invoke(s)
-    label = "tools[" + ",".join(called) + "]" if called else "tools"
-    out = dict(out); out["path"] = s.get("path", []) + [label]
-    return out
+    last = s["messages"][-1]
+    calls = getattr(last, "tool_calls", []) or []
+    uid, tenant, run_id = _principal_ids(s)
+    to_exec, refusals, mark = classify_execution(
+        calls, uid, tenant, run_id, set(s.get("approved", [])), set(s.get("executed", [])), tool_needs_approval)
+    msgs = [ToolMessage(content=json.dumps({"status": "REFUSED", "reason": reason, "tool": tc["name"]}),
+                        tool_call_id=tc["id"]) for tc, reason in refusals]
+    if to_exec:
+        exec_msg = last.model_copy(update={"tool_calls": to_exec})   # run ToolNode on approved calls only
+        node_out = _tool_node.invoke({**s, "messages": s["messages"][:-1] + [exec_msg]})
+        msgs.extend(node_out["messages"])
+    label = ("tools[" + ",".join(tc["name"] for tc in to_exec) + "]") if to_exec else \
+            ("tools(refused)" if refusals else "tools")
+    return {"messages": msgs, "path": s.get("path", []) + [label],
+            "executed": list(set(s.get("executed", [])) | set(mark))}
 
 def build_graph(checkpointer=None):
     g = StateGraph(AgentState)
@@ -119,7 +139,7 @@ graph = build_graph()
 def run(task: str, thread_id: str = "default", tenant: str | None = None) -> dict:
     cfg = {"configurable": {"thread_id": thread_id}, "recursion_limit": int(os.getenv("MAX_STEPS", 12)) * 3,
            **tag_run(thread_id=thread_id, tenant=tenant or os.getenv("TENANT", "demo"))}
-    out = graph.invoke({"task": task, "path": []}, config=cfg)
+    out = graph.invoke({"task": task, "path": [], "run_id": thread_id}, config=cfg)
     res = out.get("result")
     if res: res = {**res, "trace": {"path": out.get("path", []), "steps": out.get("step_count"), "tool_calls": out.get("tool_calls")}}
     return res or {"status": "interrupted", "state": out.get("__interrupt__"), "path": out.get("path", [])}

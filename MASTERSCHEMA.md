@@ -71,6 +71,14 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | authorize(principal, action, resource) | DETERMINISTIC allow/deny — never the LLM | tenant isolation · self-only reset (unless admin) · no self-approval of privileged · retrieve ≤ clearance ∧ group ACL |
 | enforcement | tools call authorize() before acting; retrieval filters by `groups` | trust boundary: gateway authenticates, this layer enforces per-principal |
 
+## Approval integrity (agent/approval.py) — D-034
+| Piece | What |
+|-------|------|
+| proposal_hash | sha256(tool \| normalized_args \| principal \| tenant \| run_id) — the human approves THIS hash |
+| bind | at execution, recompute from actual args; not-in-approved ⇒ REFUSED (args changed after approval) |
+| idempotency | each executed hash recorded; replay/resume ⇒ idempotent skip (side effect fires once) |
+| enforced in | graph `approval` node records approved hashes; `traced_tools` classifies EXECUTE/REFUSE/SKIP |
+
 ## Ingestion (agent/ingest.py) — the stage before retrieval
 | Step | What | Notes |
 |------|------|-------|

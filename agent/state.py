@@ -32,3 +32,6 @@ class AgentState(TypedDict, total=False):
     errors: list[str]
     path: list[str]              # node sequence, D-013 (trace path)
     principal: Optional[dict]    # who is calling (identity.Principal.as_claims()); authz uses it, D-033
+    run_id: str                  # binds approvals to this run (D-034)
+    approved: list[str]          # proposal hashes a human approved (D-034)
+    executed: list[str]          # proposal hashes already executed — idempotency (D-034)
