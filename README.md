@@ -19,6 +19,22 @@
 | **Governance** | `MANIFEST.md` (D-rows) ↔ `tests/` ↔ `MASTERSCHEMA.md` ↔ `update.py --check --evals` (drift + tests + gate) | a directive that isn't a test is a defect |
 | **Deploy** | SAM → Lambda (Secrets Manager key or Bedrock IAM) · Docker → App Runner · HF Inference Endpoint script · Bedrock preflight | curl a public URL in minutes |
 
+## Architecture — four planes
+One lens over everything below: every capability sits in one of four planes, and the audit report's 10
+layers (L1–L10) plus the security D-rows map cleanly onto them.
+
+| Plane | What it owns | Layers / controls |
+|---|---|---|
+| **Intelligence** | getting the answer right | model registry (L5) · routed RAG (L2) · 3-kind memory (L3) · the plan→act graph |
+| **Control** | bounding what it can *do* | 6-layer guardrails (L1) · tools + HITL (L4) · identity + authz (D-033) · approval integrity (D-034) · tenant / sensitivity / document-ACL (D-036) |
+| **Assurance** | proving it, continuously | tracing (L6) · eval gate (L7) · adversarial suite (D-035) · the audit report · MANIFEST → control → test |
+| **Integration** | fitting the customer's stack | MCP (L8) · swappable vector backend (L9) · infra / deploy (L10) · document ingestion (D-032/D-036) |
+
+**Control** and **Assurance** are the forward-deployed differentiators: most demos ship Intelligence +
+Integration; what makes an agent *safe to leave running* is that its behavior is bounded (Control) and that
+boundary is **continuously proven** (Assurance). The trust boundary above sits at the edge of the Control
+plane — an authenticated gateway hands in the principal; every plane enforces from there.
+
 ## 60-second start
 ```bash
 make setup                 # deps + .env
