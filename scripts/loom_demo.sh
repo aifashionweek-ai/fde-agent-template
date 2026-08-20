@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # loom_demo.sh — drives the 5–6 min hybrid FDE Agent walkthrough (docs/LOOM-SCRIPT.md).
-# ENTER-paced: each beat pauses so you narrate over it. The BEAT 3 attack sequence is the climax —
+# ENTER-paced: each beat pauses so you narrate over it. The attack sequence (beat three) is the climax —
 # three real controls run live and print their actual refusal output. Ctrl-C to stop.
 # Set LOOM_NO_OPEN=1 to skip auto-opening the HTML reports (used by the test; the live demo opens them).
 set -uo pipefail
