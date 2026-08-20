@@ -66,9 +66,14 @@ class IngestStats:
                 "skipped": self.skipped}
 
 
-def ingest_document(path, *, tenant: str, sensitivity: str = "internal", strategy: str | None = None):
-    """Parse ONE document into cleaned, tenant/sensitivity-tagged chunks (list[Chunk]).
-    A corrupt/empty/unparseable file is logged and returns [] — it never raises (J-05 honest skip)."""
+def _document_id(source_uri) -> str:
+    """Stable id keyed by the document's location (URI/path) — survives content changes so a modified
+    document REPLACES its old chunks rather than duplicating them (D-036)."""
+    return hashlib.sha1(str(source_uri).encode()).hexdigest()[:10]
+
+
+def _parse(path, strategy):
+    """Run the REAL parser + clean. Returns (text, n_elements, strategy) or None on unparseable/empty."""
     partition = _require_partition()
     p = pathlib.Path(path)
     strategy = strategy or os.getenv("INGEST_STRATEGY", "fast")
@@ -76,19 +81,94 @@ def ingest_document(path, *, tenant: str, sensitivity: str = "internal", strateg
         els = partition(filename=str(p), strategy=strategy)
     except Exception as e:
         log.warning("ingest_parse_failed", path=str(p), error=f"{type(e).__name__}: {e}")
-        return []
+        return None
     texts = [getattr(el, "text", "") or "" for el in els if getattr(el, "category", "") not in BOILERPLATE]
     text = _clean("\n".join(texts))
     if not text.strip():
         log.warning("ingest_empty", path=str(p), elements=len(els))
+        return None
+    return text, len(els), strategy
+
+
+def _chunks_from_text(p, text, n_els, strategy, *, tenant, sensitivity, allowed_groups, version):
+    """Build tagged chunks with FULL lifecycle + ACL provenance. Retrieved content is treated as UNTRUSTED
+    (an indirect-injection surface) — never as instructions; only tools + authz can act."""
+    source_uri = str(p.resolve()) if p.exists() else str(p)
+    document_id = _document_id(source_uri)
+    content_hash = hashlib.sha256(text.encode()).hexdigest()
+    meta = {"source_id": p.stem, "document_id": document_id, "document_version": version,
+            "content_hash": content_hash[:16], "content_hash_full": content_hash,
+            "source_uri": source_uri, "parser": f"unstructured:{strategy}", "elements": n_els,
+            "allowed_groups": list(allowed_groups) if allowed_groups else None,
+            "UNTRUSTED": True}                              # indirect-injection surface — content is data, not orders
+    chunks = chunk_document(document_id, text, source=p.stem, tenant=tenant, sensitivity=sensitivity, meta=meta)
+    return chunks, content_hash, document_id
+
+
+def ingest_document(path, *, tenant: str, sensitivity: str = "internal", allowed_groups=None,
+                    strategy: str | None = None):
+    """Parse ONE document into cleaned, tenant/sensitivity/ACL-tagged chunks (list[Chunk]).
+    A corrupt/empty/unparseable file is logged and returns [] — it never raises (J-05 honest skip)."""
+    p = pathlib.Path(path)
+    r = _parse(p, strategy)
+    if r is None:
         return []
-    doc_id = hashlib.sha1(str(p).encode()).hexdigest()[:10]
-    content_hash = hashlib.sha256(text.encode()).hexdigest()[:16]
-    chunks = chunk_document(doc_id, text, source=p.stem, tenant=tenant, sensitivity=sensitivity,
-                            meta={"path": str(p), "content_hash": content_hash,
-                                  "elements": len(els), "parser": f"unstructured:{strategy}"})
-    log.info("ingest_document", path=str(p), elements=len(els), chunks=len(chunks))
+    text, n_els, strat = r
+    chunks, _, _ = _chunks_from_text(p, text, n_els, strat, tenant=tenant, sensitivity=sensitivity,
+                                     allowed_groups=allowed_groups, version=1)
+    log.info("ingest_document", path=str(p), elements=n_els, chunks=len(chunks))
     return chunks
+
+
+class IngestLedger:
+    """Tracks ingested documents by content hash so re-ingestion is a content-hash LIFECYCLE, not a
+    blind re-add: unchanged→skip, new→add, modified→replace, identical-content-elsewhere→dedup (D-036)."""
+    def __init__(self):
+        self.by_doc: dict[str, str] = {}       # document_id -> content_hash
+        self.versions: dict[str, int] = {}     # document_id -> version
+
+
+def sync_document(index, path, *, tenant: str, sensitivity: str = "internal", allowed_groups=None,
+                  ledger: IngestLedger, strategy: str | None = None) -> str:
+    """Content-hash lifecycle for ONE document. Returns: 'added' | 'skipped' (unchanged) | 'replaced'
+    (modified — old chunks deleted, re-chunked) | 'deduped' (identical content under a different uri) |
+    'empty' (unparseable)."""
+    p = pathlib.Path(path)
+    r = _parse(p, strategy)
+    if r is None:
+        return "empty"
+    text, n_els, strat = r
+    source_uri = str(p.resolve()) if p.exists() else str(p)
+    document_id = _document_id(source_uri)
+    content_hash = hashlib.sha256(text.encode()).hexdigest()
+    owner = next((d for d, h in ledger.by_doc.items() if h == content_hash), None)
+    if owner == document_id:
+        return "skipped"                                   # identical content, same document → nothing to do
+    if owner is not None:
+        return "deduped"                                   # identical content under a different uri → skip
+    version = ledger.versions.get(document_id, 0) + 1
+    chunks, _, _ = _chunks_from_text(p, text, n_els, strat, tenant=tenant, sensitivity=sensitivity,
+                                     allowed_groups=allowed_groups, version=version)
+    action = "added"
+    if document_id in ledger.by_doc:
+        index.remove_document(document_id)                 # modified → replace old vectors
+        action = "replaced"
+    index.add(chunks)
+    ledger.by_doc[document_id] = content_hash
+    ledger.versions[document_id] = version
+    log.info("sync_document", path=str(p), action=action, version=version, chunks=len(chunks))
+    return action
+
+
+def delete_document(index, path, ledger: IngestLedger) -> int:
+    """Remove a deleted source document's vectors + ledger entry. Returns chunks removed (D-036)."""
+    p = pathlib.Path(path)
+    document_id = _document_id(str(p.resolve()) if p.exists() else str(p))
+    removed = index.remove_document(document_id)
+    ledger.by_doc.pop(document_id, None)
+    ledger.versions.pop(document_id, None)
+    log.info("delete_document", path=str(p), removed=removed)
+    return removed
 
 
 def ingest_directory(path, *, tenant: str, sensitivity: str = "internal", index=None,

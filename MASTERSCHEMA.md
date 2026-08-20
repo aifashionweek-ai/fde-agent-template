@@ -89,6 +89,13 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | skip | corrupt/empty/unsupported → logged + counted, never raises | `ingest_directory` returns real counts (files, chunks, bytes) |
 Optional extras in requirements-ingest.txt; core + `update.py --check` run without them (D-032).
 
+**Lifecycle + document ACLs (D-036).** Chunk meta also carries `source_id, document_id, document_version,
+content_hash, source_uri, allowed_groups, UNTRUSTED`. `sync_document()` is content-hash driven —
+unchanged→skip, new→add, modified→replace (re-chunk + delete old), identical-content-elsewhere→dedup;
+`delete_document()` removes a deleted source's vectors. Retrieval authorization = **tenant AND
+sensitivity≤clearance AND allowed_groups ∩ principal.groups**. Retrieved content is UNTRUSTED (an
+indirect-injection surface): it is data, never instructions — only tools + authz can act.
+
 ## Guard layers (agent/guards.py)
 | Layer | What                                   | Switch                              | Cost   |
 |-------|----------------------------------------|-------------------------------------|--------|

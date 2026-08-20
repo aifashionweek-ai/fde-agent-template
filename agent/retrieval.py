@@ -66,6 +66,13 @@ class InMemoryIndex:
     def __init__(self): self.chunks: list[Chunk] = []; self._bm25 = None; self._emb: list[list[float]] | None = None
     def add(self, chunks: Iterable[Chunk]):
         self.chunks.extend(chunks); self._bm25 = _BM25([_tok(c.text) for c in self.chunks]); self._emb = None
+    def remove_document(self, document_id: str) -> int:
+        """Delete all chunks of a document (ingestion lifecycle, D-036); rebuild BM25. Returns count removed."""
+        before = len(self.chunks)
+        self.chunks = [c for c in self.chunks if (c.meta or {}).get("document_id") != document_id]
+        self._bm25 = _BM25([_tok(c.text) for c in self.chunks]) if self.chunks else None
+        self._emb = None
+        return before - len(self.chunks)
     def _embed(self, texts: list[str]) -> list[list[float]] | None:
         if os.getenv("EMBED_PROVIDER", "none") != "openai": return None
         from openai import OpenAI
