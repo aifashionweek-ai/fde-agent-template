@@ -84,15 +84,24 @@ update.py        regenerates tool_registry.json · drift checks · pytest · [--
 └── update.py        # regenerates derived files, drift-checks, runs the gate
 ```
 
-## Scaling — the contract is the seam
-The demo runs zero-setup; production swaps a backend behind the same contract, callers unchanged.
-| Dimension | Demo default | Production (same interface) |
+## Scale & limitations — what's demo-scale vs production-grade
+Stated up front, because knowing the boundary is a credibility feature, not a disclaimer. The demo runs
+zero-setup; each backend swaps behind the same contract, callers unchanged — so scale is a config change,
+not a rewrite.
+
+| | Demo default (this repo) | Production (same interface) |
 |---|---|---|
 | Retrieval store | in-memory BM25 | `VECTOR_BACKEND=pinecone` — one namespace per tenant (docs/12) |
-| Model | Anthropic API | Bedrock **in-account** for residency, or an HF endpoint — swap via `MODEL_PROFILE` / `select_model` |
-| API host | `uvicorn` local | AWS Lambda (SAM) or App Runner (Docker) — the graph is stateless, scales horizontally |
-| Corpus | seeded demo docs | `load_dir()` over a mounted folder or object storage |
+| Corpus | small seeded set (single-digit docs, by design) | `load_dir()` / ingestion over object storage (S3) — hundreds→millions |
+| Golden set | a few rows per slice | hundreds of rows, grown from prod traces |
+| Model | Anthropic API | Bedrock **in-account** for residency, or HF endpoint — swap via `MODEL_PROFILE` |
+| API host | local `uvicorn` | AWS Lambda (SAM) / App Runner (Docker) — graph is stateless, scales horizontally |
 | Memory | JSON file | Postgres / DynamoDB (docs/12) |
+
+**Production-grade already** (not demo-scale): the contracts, the 6-layer guardrails, HITL, tenant +
+sensitivity routing, tracing, the eval gate, and the MANIFEST→test governance. These don't change with scale.
+**Demo-scale by design**: corpus size and the in-memory index — swapped by env, no code change. The point of
+the template is that the *governance* is production-grade on day one; the *data plane* grows into the customer's.
 
 ## The one-paragraph pitch
 It's a LangGraph agent behind a FastAPI endpoint. Every request passes a layered input guard, gets planned, then runs a bounded plan-act loop against an allowlisted tool set (search, calculate, http_get, sql_query, recall_memory, write_record, remember, human_handoff), pausing for human approval on side effects. Retrieval is routed — tenant, sensitivity, source — before anything is ranked, and only retrieved ids can be cited; the output is schema-validated and grounding-checked before it leaves. The model is a profile chosen by constraints — Anthropic by default, Bedrock when traffic must stay in the customer's account, open weights on Hugging Face when a narrow task or residency demands it. Every run is traced in LangSmith with its path and tenant, and scored in Braintrust against a golden set with calibration and judge-agreement checks; a regression gate blocks the deploy. It's governed by a MANIFEST of directives, a MASTERSCHEMA of contracts, and an `update.py` that refuses to pass unless the guards do.

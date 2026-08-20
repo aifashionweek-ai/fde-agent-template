@@ -1,5 +1,11 @@
 # Model Bake-off — Enterprise IT-Ops agent · 2026-08-19
 
+**Headline:** the deterministic *safety controls are model-independent* — schema, PII, grounding, HITL,
+tenant isolation, budget all pass 1.00 across Claude, Qwen3, and Llama3.3. On answer *quality* the best
+open model (Qwen3-32B) **ties** the closed model (Claude), while the weaker open model (Llama3.3) **visibly
+fails** (it emitted raw tool-call JSON as its final answer on several rows). So **model choice here is a
+quality decision, not a safety one** — governance holds regardless of which model you run.
+
 Same governed agent, same golden set, three models. Deterministic scorers are invariants (must be 1.00); judge scores measure nuanced quality.
 
 ## Deterministic scorers (safety invariants)
