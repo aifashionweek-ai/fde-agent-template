@@ -39,6 +39,17 @@ def main():
     decl = set(re.findall(r"^def (\w+)\(", code, re.M)) - {"tool_needs_approval"}
     missing = decl - names_in_schema
     if missing: print(f"[update] DRIFT: tools in code not in MASTERSCHEMA: {sorted(missing)}"); sys.exit(2)
+    extra = names_in_schema - decl
+    if extra: print(f"[update] DRIFT: tools in MASTERSCHEMA not in code (parse error or stale?): {sorted(extra)}"); sys.exit(2)
+    # Count cross-check: a @tool in code must have produced a registry row. If the table parsed fewer
+    # rows than the code has tools, a MASTERSCHEMA row failed the regex (e.g. a stray unicode char).
+    n_code = len([d for d in decl])
+    if len(tools) != n_code:
+        print(f"[update] DRIFT: parsed {len(tools)} registry rows but code declares {n_code} @tool fns.")
+        print(f"         code tools: {sorted(decl)}")
+        print(f"         parsed:     {sorted(names_in_schema)}")
+        print(f"         A MASTERSCHEMA tool-table row failed to parse. Check for trailing spaces / unicode dashes / 'yes' vs digits.")
+        sys.exit(2)
     for r in manifest:
         g = r["guard"].split("::")[0].split(" ")[0].strip(" ·")
         if g and not (ROOT/g).exists() and r["id"] != "D-0xx":

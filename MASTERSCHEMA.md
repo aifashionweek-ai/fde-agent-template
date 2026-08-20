@@ -22,17 +22,18 @@
 | actions     | list[Action]| each action ∈ tool allowlist; D-003               |
 | trace       | dict        | {path, steps, tool_calls} — added by run(); D-013 |
 
-## Tool registry (agent/tools.py)
-| Tool            | Side effect | Approval | Timeout |
-|-----------------|-------------|----------|---------|
-| search_kb       | no          | no       | 10s     |
-| calculate       | no          | no       | 2s      |
-| write_record    | YES         | YES      | 10s     |
-| http_get        | no          | no       | 6s      |
-| sql_query       | no          | no       | 6s      |
-| recall_memory   | no          | no       | 3s      |
-| remember        | YES         | YES      | 5s      |
-| human_handoff   | YES         | YES      | 5s      |
+## Tool registry (agent/tools.py) — Enterprise IT-Ops agent
+| Tool               | Side effect | Approval | Timeout |
+|--------------------|-------------|----------|---------|
+| search_policy      | no          | no       | 10s     |
+| lookup_employee    | no          | no       | 5s      |
+| recall_memory      | no          | no       | 3s      |
+| calculate          | no          | no       | 2s      |
+| reset_access       | YES         | YES      | 10s     |
+| create_ticket      | YES         | YES      | 10s     |
+| provision_resource | YES         | YES      | 10s     |
+| remember           | YES         | YES      | 5s      |
+| escalate_to_human  | YES         | YES      | 5s      |
 
 ## Memory (agent/memory.py) — three kinds
 | Kind | Scope | Lifetime | Backend | Row |

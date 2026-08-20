@@ -1,12 +1,9 @@
-"""Tool registry. Each tool: a docstring the model reads, a side-effect flag, an approval flag.
-Add problem-specific tools here, register in tool_registry.json (or let update.py regen), run update.py.
+"""Tool registry — Enterprise IT-Ops / Employee Support agent.
+Read tools are safe (no approval). Write/action tools are side effects -> approval-gated (HITL, D-004).
+Unknown tool -> needs_approval True (safe default). Tools return JSON; retrieval ids are the only legal citations.
 
-Design notes for an FDE audience:
-  - Read tools (search_kb, calculate, http_get, sql_query, recall_memory) are safe, no approval.
-  - Write/side-effect tools (write_record, remember, human_handoff) are gated: tool_needs_approval()
-    returns True, the graph routes them through the approval (HITL) node (D-004).
-  - Unknown tool name -> needs_approval True by default (safe default).
-  - Tools return JSON strings; the agent cites/uses ids from them. Retrieval ids are the only legal citations.
+This maps to Hang Ten's "operate software" half: the agent doesn't just answer, it takes real
+remediation actions (reset access, file tickets, provision resources) — always human-approved.
 """
 from langchain_core.tools import tool
 import json, os, pathlib, re
@@ -15,17 +12,32 @@ REGISTRY = {t["name"]: t for t in json.loads((pathlib.Path(__file__).parent/"too
 
 # ---------- READ tools (no side effect, no approval) ----------
 @tool
-def search_kb(query: str) -> str:
-    """Search the customer knowledge base for relevant passages. Read-only. Returns chunk ids you MUST cite."""
+def search_policy(query: str) -> str:
+    """Search the company's policy wiki and IT runbooks for relevant passages. Read-only.
+    Returns chunk ids you MUST cite. Scoped to the caller's tenant and clearance automatically."""
     from .retrieval import INDEX, seed_demo
     if not INDEX.chunks: seed_demo()
-    hits = INDEX.search(query, tenant=os.getenv("TENANT", "demo"),
+    hits = INDEX.search(query, tenant=os.getenv("TENANT", "meridian"),
                         max_sensitivity=os.getenv("MAX_SENSITIVITY", "internal"), k=5)
     return json.dumps(hits)
 
 @tool
+def lookup_employee(employee_id: str) -> str:
+    """Look up an employee's directory record (name, dept, manager, schedule). Read-only, tenant-scoped."""
+    from .directory import lookup
+    return json.dumps(lookup(os.getenv("TENANT", "meridian"), employee_id))
+
+@tool
+def recall_memory(query: str) -> str:
+    """Recall facts remembered about THIS employee from past sessions (preferences, prior tickets). Read-only."""
+    from .memory import STORE
+    tenant, user = os.getenv("TENANT", "meridian"), os.getenv("USER_ID", "anon")
+    mems = STORE.search(tenant, user, query, k=3)
+    return json.dumps([{"key": m.key, "value": m.value, "kind": m.kind} for m in mems])
+
+@tool
 def calculate(expression: str) -> str:
-    """Evaluate a safe arithmetic expression (e.g. '17 * 23')."""
+    """Evaluate a safe arithmetic expression (e.g. PTO days remaining)."""
     import ast, operator as op
     ops = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul, ast.Div: op.truediv, ast.Pow: op.pow, ast.USub: op.neg}
     def ev(n):
@@ -35,71 +47,50 @@ def calculate(expression: str) -> str:
         raise ValueError("unsafe")
     return str(ev(ast.parse(expression, mode="eval").body))
 
+
+# ---------- ACTION / side-effect tools (approval required, HITL) ----------
 @tool
-def http_get(url: str) -> str:
-    """Fetch a URL (read-only GET). Egress is allow-listed: only hosts in HTTP_ALLOW_HOSTS are permitted."""
-    allow = {h.strip() for h in os.getenv("HTTP_ALLOW_HOSTS", "api.github.com,example.com").split(",") if h.strip()}
-    from urllib.parse import urlparse
-    host = urlparse(url).hostname or ""
-    if host not in allow:
-        return json.dumps({"error": f"host '{host}' not in HTTP_ALLOW_HOSTS", "allowed": sorted(allow)})
-    try:
-        import requests
-        r = requests.get(url, timeout=5)
-        return json.dumps({"status": r.status_code, "body": r.text[:2000]})
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+def reset_access(employee_id: str, system: str) -> str:
+    """Reset an employee's access grant for a system (clears lockouts, re-issues SSO token).
+    SIDE EFFECT — requires human approval. Never resets OT/SCADA access without change-control."""
+    return json.dumps({"action": "reset_access", "employee_id": employee_id, "system": system, "status": "queued"})
 
 @tool
-def sql_query(query: str) -> str:
-    """Run a READ-ONLY SQL query against the analytics DB. SELECT only; writes are rejected before execution.
-    Demo backend is an in-memory SQLite with an `orders` table; swap for the customer's warehouse in prod."""
-    if not re.match(r"^\s*select\b", query, re.I) or re.search(r"\b(insert|update|delete|drop|alter|create)\b", query, re.I):
-        return json.dumps({"error": "read-only: only SELECT permitted"})
-    import sqlite3
-    con = sqlite3.connect(":memory:")
-    con.execute("CREATE TABLE orders(id int, tenant text, status text, total real)")
-    con.executemany("INSERT INTO orders VALUES (?,?,?,?)",
-                    [(1, "demo", "shipped", 189.0), (2, "demo", "refunded", 129.5), (3, "acme", "shipped", 42.0)])
-    try:
-        cur = con.execute(query)
-        cols = [c[0] for c in cur.description]
-        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-        return json.dumps({"rows": rows})
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+def create_ticket(queue: str, summary: str, priority: str = "P3") -> str:
+    """File a ticket to an IT/NetOps/SecOps queue. SIDE EFFECT — requires human approval."""
+    return json.dumps({"action": "create_ticket", "queue": queue, "summary": summary,
+                       "priority": priority, "ticket_id": "TCK-DEMO-001", "status": "created"})
 
 @tool
-def recall_memory(query: str) -> str:
-    """Recall facts remembered about THIS user from past sessions (long-term/episodic memory). Read-only."""
-    from .memory import STORE
-    tenant, user = os.getenv("TENANT", "demo"), os.getenv("USER_ID", "anon")
-    mems = STORE.search(tenant, user, query, k=3)
-    return json.dumps([{"key": m.key, "value": m.value, "kind": m.kind, "age_days": round((__import__("time").time()-m.created_at)/86400, 1)} for m in mems])
-
-
-# ---------- WRITE / side-effect tools (approval required) ----------
-@tool
-def write_record(table: str, record: dict) -> str:
-    """Write a record to the system of record. SIDE EFFECT — requires human approval."""
-    return json.dumps({"ok": True, "table": table, "record": record})
+def provision_resource(resource: str, employee_id: str) -> str:
+    """Provision a resource (license, VM, group membership) for an employee. SIDE EFFECT — requires approval."""
+    return json.dumps({"action": "provision_resource", "resource": resource,
+                       "employee_id": employee_id, "status": "provisioned"})
 
 @tool
 def remember(key: str, value: str) -> str:
-    """Persist a durable fact about THIS user to long-term memory. SIDE EFFECT — requires approval.
-    Use for stable preferences/attributes ('prefers_metric', 'tier=enterprise'), not transient chatter."""
+    """Persist a durable fact about THIS employee to long-term memory (e.g. schedule, preferences).
+    SIDE EFFECT — requires approval. Use for stable facts, not transient chatter."""
     from .memory import STORE
-    tenant, user = os.getenv("TENANT", "demo"), os.getenv("USER_ID", "anon")
+    tenant, user = os.getenv("TENANT", "meridian"), os.getenv("USER_ID", "anon")
     m = STORE.put(tenant, user, "semantic", key, value, source="agent")
     return json.dumps({"ok": True, "id": m.id, "key": key})
 
 @tool
-def human_handoff(reason: str) -> str:
-    """Escalate to a human operator. SIDE EFFECT — requires approval. Use when the task is out of policy
-    or the agent's confidence is low on a consequential action."""
-    return json.dumps({"handoff": True, "reason": reason, "queue": os.getenv("HANDOFF_QUEUE", "support")})
+def escalate_to_human(reason: str) -> str:
+    """Escalate to a human operator when the task is out of policy or confidence is low. SIDE EFFECT — approval."""
+    return json.dumps({"handoff": True, "reason": reason, "queue": os.getenv("HANDOFF_QUEUE", "it-support")})
 
 
-TOOLS = [search_kb, calculate, http_get, sql_query, recall_memory, write_record, remember, human_handoff]
+TOOLS = [search_policy, lookup_employee, recall_memory, calculate,
+         reset_access, create_ticket, provision_resource, remember, escalate_to_human]
 SIDE_EFFECT_TOOLS = {n for n, t in REGISTRY.items() if t.get("side_effect")}
-def tool_needs_approval(name: str) -> bool: return REGISTRY.get(name, {}).get("approval", True)
+def tool_needs_approval(name: str) -> bool:
+    """Unknown tool -> approval required (safe default in prod). But under STRICT_REGISTRY=1 (tests/CI)
+    an unknown tool RAISES, so a registry/parse drift fails loudly instead of hiding as a 'safe default'."""
+    if name not in REGISTRY:
+        import os
+        if os.getenv("STRICT_REGISTRY") == "1":
+            raise KeyError(f"tool '{name}' not in registry — MASTERSCHEMA/registry drift, not a real unknown tool")
+        return True
+    return REGISTRY[name].get("approval", True)

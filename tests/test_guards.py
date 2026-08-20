@@ -27,9 +27,21 @@ def test_tool_allowlist():                               # D-003
         output_guard({"answer": "x", "confidence": 0.5, "actions": [{"tool": "rm_rf", "args": {}}]})
 
 def test_hitl_gate():                                    # D-004
-    assert tool_needs_approval("reset_access") is True
-    assert tool_needs_approval("search_policy") is False
-    assert tool_needs_approval("unknown_tool") is True   # unknown = safe default
+    import os
+    assert tool_needs_approval("reset_access") is True   # action tool -> approval
+    assert tool_needs_approval("search_policy") is False # read tool -> no approval (proves registry parsed all 9)
+    # unknown tool: safe-default True in prod, but RAISES under STRICT_REGISTRY (so drift fails loudly, not silently)
+    old = os.environ.pop("STRICT_REGISTRY", None)
+    try:
+        assert tool_needs_approval("unknown_tool") is True
+    finally:
+        if old is not None: os.environ["STRICT_REGISTRY"] = old
+
+def test_strict_registry_raises_on_unknown(monkeypatch):  # D-003/D-004: drift must fail loudly
+    monkeypatch.setenv("STRICT_REGISTRY", "1")
+    import pytest
+    with pytest.raises(KeyError):
+        tool_needs_approval("this_tool_does_not_exist")
 
 def test_output_pii_redaction():                         # D-005 (egress)
     out = output_guard({"answer": "call 555-123-4567 or ssn 123-45-6789", "confidence": 0.5})

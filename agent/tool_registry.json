@@ -1,33 +1,15 @@
 [
   {
-    "name": "search_kb",
+    "name": "search_policy",
     "side_effect": false,
     "approval": false,
     "timeout": 10
   },
   {
-    "name": "calculate",
+    "name": "lookup_employee",
     "side_effect": false,
     "approval": false,
-    "timeout": 2
-  },
-  {
-    "name": "write_record",
-    "side_effect": true,
-    "approval": true,
-    "timeout": 10
-  },
-  {
-    "name": "http_get",
-    "side_effect": false,
-    "approval": false,
-    "timeout": 6
-  },
-  {
-    "name": "sql_query",
-    "side_effect": false,
-    "approval": false,
-    "timeout": 6
+    "timeout": 5
   },
   {
     "name": "recall_memory",
@@ -36,13 +18,37 @@
     "timeout": 3
   },
   {
+    "name": "calculate",
+    "side_effect": false,
+    "approval": false,
+    "timeout": 2
+  },
+  {
+    "name": "reset_access",
+    "side_effect": true,
+    "approval": true,
+    "timeout": 10
+  },
+  {
+    "name": "create_ticket",
+    "side_effect": true,
+    "approval": true,
+    "timeout": 10
+  },
+  {
+    "name": "provision_resource",
+    "side_effect": true,
+    "approval": true,
+    "timeout": 10
+  },
+  {
     "name": "remember",
     "side_effect": true,
     "approval": true,
     "timeout": 5
   },
   {
-    "name": "human_handoff",
+    "name": "escalate_to_human",
     "side_effect": true,
     "approval": true,
     "timeout": 5
