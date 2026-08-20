@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 import os
 from dataclasses import dataclass, field
+from .logging_setup import log
 from typing import Literal, Optional
 
 Provider   = Literal["anthropic", "bedrock", "hf"]
@@ -34,6 +35,8 @@ class ModelProfile:
     notes: str = ""
 
     def build(self, temperature: float = 0.0, max_tokens: int = 2000):
+        log.info("model_build", profile=self.id, provider=self.provider, model=self.model,
+                 weights=self.weights, residency=self.residency)
         if self.provider == "anthropic":
             from langchain_anthropic import ChatAnthropic
             return ChatAnthropic(model=self.model, temperature=temperature, max_tokens=max_tokens)
@@ -57,9 +60,20 @@ class ModelProfile:
         raise ValueError(self.provider)
 
 def _bedrock_guardrail() -> Optional[dict]:
-    gid = os.getenv("BEDROCK_GUARDRAIL_ID")
+    """Attach a Bedrock Guardrail ONLY if explicitly enabled with a real id. A missing/placeholder id
+    must never be attached — an invalid guardrailIdentifier 400s the entire Converse call (this bug cost
+    a whole bake-off: every open-model tool row failed with 'guardrail identifier is invalid' until the
+    LangSmith trace revealed it was config, not the model). J-04: fail loud OR skip cleanly, never poison."""
+    gid = os.getenv("BEDROCK_GUARDRAIL_ID", "").strip()
+    if not gid or gid.lower() in ("none", "your-guardrail-id", "changeme", "placeholder"):
+        return None
+    # Bedrock guardrail ids are lowercase alphanumeric, ~12 chars. Reject obvious non-ids.
+    if not gid.replace("-", "").isalnum():
+        from .logging_setup import log
+        log.warning("bedrock_guardrail_skipped", reason="id looks invalid", gid=gid)
+        return None
     return {"guardrailIdentifier": gid, "guardrailVersion": os.getenv("BEDROCK_GUARDRAIL_VERSION", "DRAFT"),
-            "trace": "enabled"} if gid else None
+            "trace": "enabled"}
 
 # ---- Registry. Tiers are placeholders until YOUR eval run fills them in (docs/01-model-selection.md §4). ----
 REGISTRY: dict[str, ModelProfile] = {p.id: p for p in [
