@@ -66,3 +66,55 @@ def agreement(a: list[float], b: list[float], thresh: float = 0.5) -> float:
     """Fraction of rows where two judges agree on pass/fail. < 0.8 means your rubric is ambiguous — fix the rubric, not the model."""
     if not a: return 1.0
     return round(sum((x >= thresh) == (y >= thresh) for x, y in zip(a, b)) / len(a), 3)
+
+# ---------- LLM judges (correctness-focused; docs/05-evals-braintrust.md) ----------
+# `factual` grades CORRECTNESS vs the reference facts, NOT verbosity. A correct answer that adds helpful
+# detail or cites the right runbook earns full marks; a wrong/contradictory answer scores zero. This
+# replaces autoevals.Factuality, whose subset/superset scoring capped correct-but-detailed answers at 0.6
+# (e.g. "17 × 23 = 391" vs gold "391" scored 0.6). Wrong answers MUST still score low — see FACTUAL_SCORES
+# (D→0.0, monotonic) and the catch-proof in tests/test_scorers_judge.py. Grounding (deterministic, 1.00)
+# remains the real citation/correctness invariant; this judge measures nuanced answer quality.
+FACTUAL_PROMPT = (
+    "You are grading an AI support agent's answer for CORRECTNESS ONLY — not length, style, or wording.\n"
+    "User question:\n{{input}}\n\n"
+    "Reference (the key facts that must be correct; may be terse):\n{{expected}}\n\n"
+    "Agent answer (may cite evidence ids in a separate note; extra correct detail is fine):\n{{output}}\n\n"
+    "Grade how well the agent answer matches the reference FACTS:\n"
+    "A) Fully correct — all key facts from the reference are present and nothing contradicts it. Extra "
+    "correct or helpful detail, and citing the right runbook, is GOOD and must NOT lower the grade.\n"
+    "B) Mostly correct — the main fact is right but one minor point is vague or missing.\n"
+    "C) Partially correct — some right content but a material fact is missing or muddled.\n"
+    "D) Incorrect — a wrong value, a claim that contradicts the reference, or fabricated facts.\n"
+    "Rules: a correct answer that is longer or more detailed than the reference is A, not B. A wrong "
+    "number or anything that contradicts the reference is always D.\n"
+    "Reply with exactly one letter: A, B, C, or D.")
+FACTUAL_SCORES = {"A": 1.0, "B": 0.7, "C": 0.4, "D": 0.0}
+
+RUBRIC_PROMPT = (
+    "You are grading whether an AI support agent's answer satisfies a rubric.\n"
+    "User question:\n{{input}}\n\n"
+    "Rubric / expected (what a good answer must contain; a 'cites X' requirement is satisfied when the "
+    "agent's separate evidence note lists X):\n{{expected}}\n\n"
+    "Agent answer (citations, if any, appear in a separate appended note):\n{{output}}\n\n"
+    "Does the answer satisfy the SUBSTANCE of the rubric? Correct answers with extra helpful detail PASS; "
+    "only fail if a required fact is wrong or missing.\n"
+    "Reply with exactly one letter: A = yes, B = no.")
+RUBRIC_SCORES = {"A": 1, "B": 0}
+
+def answer_for_judge(out: dict) -> str:
+    """The answer string handed to the LLM judges — appends the agent's cited evidence ids as a separate
+    note so a 'cites <runbook>' rubric is satisfied by the citations FIELD, not by prose exact-match."""
+    ans = (out or {}).get("answer", "") or ""
+    cites = (out or {}).get("citations") or []
+    if cites: ans += f"\n\n[Evidence cited by the agent (separate field): {', '.join(cites)}]"
+    return ans
+
+def make_judges(judge_a: str, judge_b: str) -> dict:
+    """Two independent LLM judges (correctness rubric + pass/fail rubric). Needs autoevals + model access."""
+    from autoevals import LLMClassifier
+    return {
+        "factual": LLMClassifier(name="factual", prompt_template=FACTUAL_PROMPT,
+                                 choice_scores=FACTUAL_SCORES, use_cot=True, model=judge_a),
+        "rubric_pass": LLMClassifier(name="rubric_pass", prompt_template=RUBRIC_PROMPT,
+                                     choice_scores=RUBRIC_SCORES, use_cot=True, model=judge_b),
+    }

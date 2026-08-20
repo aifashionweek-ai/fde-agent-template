@@ -5,7 +5,9 @@ NO GUESSING — every number traces to a file. If evidence is missing, the layer
     python -m evals.audit_report            # writes evals/results/AUDIT.html and opens it
     python -m evals.audit_report --no-open
 
-Design: 7 layers (guardrails, retrieval, memory, tools/HITL, model selection, tracing, evals). Each layer
+Design: layers (guardrails, retrieval, memory, tools/HITL, model selection, tracing, evals, MCP, vector
+backend, infra) — count computed from the LAYERS list, not hardcoded. Model-selection shows the real
+bake-off numbers; structural layers show live-computed facts. Each layer
 card shows: WHAT it does · WHY this choice · ALTERNATIVES considered · EVIDENCE (real pass/fail from logs).
 Verdict is computed, not asserted — a failing layer shows red, like the aifw-ios harness audit.
 """
@@ -48,7 +50,72 @@ def slice_scores(payload):
         agg[sl] = {k: sum((s.get(k) or 0) for s in lst)/len(lst) for k in keys if any(s.get(k) is not None for s in lst)}
     return agg
 
-# ---- the 7 layers: what / why / alternatives (design rationale is authored here, evidence is computed) ----
+def load_bakeoff():
+    """Parse the committed bake-off doc's DETERMINISTIC scorer table into real numbers (the headline
+    open-vs-closed finding). Committed evidence, always present; returns None if the doc/section is
+    absent so the card can say so honestly (J-02 — never fabricate the finding). Only the deterministic
+    section is read (bounded to the next '## '), so the judge table below it is never mixed in."""
+    doc = ROOT/"docs"/"model-eval-2026-08-19.md"
+    if not doc.exists(): return None
+    lines = doc.read_text().splitlines()
+    try: start = next(i for i, l in enumerate(lines) if l.strip().lower().startswith("## deterministic"))
+    except StopIteration: return None
+    end = next((i for i in range(start+1, len(lines)) if lines[i].strip().startswith("## ")), len(lines))
+    tbl = [l for l in lines[start:end] if l.strip().startswith("|")]
+    if len(tbl) < 3: return None
+    header = [c.strip() for c in tbl[0].strip().strip("|").split("|")]
+    models = header[1:]                                   # drop the leading 'Scorer' column
+    scorers = []
+    for row in tbl[2:]:                                    # skip header + '|---|' separator
+        cells = [c.strip() for c in row.strip().strip("|").split("|")]
+        if len(cells) != len(header): continue
+        try: vals = [float(x) for x in cells[1:]]
+        except ValueError: continue
+        scorers.append((cells[0], vals))
+    if not scorers or not models: return None
+    all_ones = all(abs(v-1.0) < 1e-9 for _, vals in scorers for v in vals)
+    return {"models": models, "scorers": scorers, "n_scorers": len(scorers),
+            "n_models": len(models), "all_ones": all_ones, "source": doc.name}
+
+# ---- evidence facts for structural layers: computed LIVE at render time, never hardcoded (J-01/J-02) ----
+def _facts_mcp():
+    try:
+        from agent.mcp_server import read_tools, action_tool_names
+        rt = [t.name for t in read_tools()]; at = sorted(action_tool_names())
+        return [("READ tools published over MCP", f"{len(rt)}: {', '.join(rt)}", len(rt) == 4),
+                ("action tools withheld (stay behind HITL)", f"{len(at)}: {', '.join(at)}", len(at) == 5),
+                ("side-effect tool exposed over MCP", "none — by construction", set(rt).isdisjoint(at))]
+    except Exception as e:
+        return [("agent.mcp_server import", f"FAILED: {e}", False)]
+
+def _facts_vector():
+    import inspect
+    try:
+        from agent.retrieval import make_index, InMemoryIndex, PineconeIndex
+        prev = os.environ.get("VECTOR_BACKEND")
+        try:
+            os.environ.pop("VECTOR_BACKEND", None)
+            default_mem = type(make_index()).__name__ == "InMemoryIndex"
+            os.environ["VECTOR_BACKEND"] = "pinecone"
+            picks_pc = type(make_index()).__name__ == "PineconeIndex"
+        finally:
+            if prev is None: os.environ.pop("VECTOR_BACKEND", None)
+            else: os.environ["VECTOR_BACKEND"] = prev
+        sig_same = (list(inspect.signature(InMemoryIndex.search).parameters) ==
+                    list(inspect.signature(PineconeIndex.search).parameters))
+        return [("default backend (zero-setup)", "in-memory", default_mem),
+                ("VECTOR_BACKEND=pinecone → PineconeIndex", "yes" if picks_pc else "no", picks_pc),
+                ("search() contract identical across backends", "yes" if sig_same else "no", sig_same)]
+    except Exception as e:
+        return [("agent.retrieval backend", f"FAILED: {e}", False)]
+
+def _facts_infra():
+    files = [("deploy/Dockerfile", "container → App Runner"),
+             ("deploy/template.yaml", "AWS SAM → Lambda"),
+             ("deploy/hf_endpoint.py", "HF Inference Endpoint (open weights)")]
+    return [(desc, p if (ROOT/p).exists() else "MISSING", (ROOT/p).exists()) for p, desc in files]
+
+# ---- the layers: what / why / alternatives (design rationale is authored here, evidence is computed) ----
 LAYERS = [
  dict(id="L1", name="Guardrails (6 layers)", icon="🛡️",
    what="Layered input/output safety: regex PII+injection, Presidio, Prompt-Guard/Lakera, Bedrock Guardrails, output grounding, HITL.",
@@ -74,7 +141,7 @@ LAYERS = [
    what="Constraint-driven registry: select_model(task, residency, cost, quality, license). Anthropic API + Bedrock (Claude closed; Qwen/Llama open, in-account) + HF. Fine-tune path via LoRA + Bedrock Custom Model Import.",
    why="Separate 'can we use it' (residency/license/cost) from 'is it good' (our evals). Default frontier-closed via the most compliant path; open weights earn their place per slice, measured.",
    alts="One hardcoded model (no residency story) · always-open (quality risk on reasoning) · always-closed (cost, lock-in, no in-account option for regulated data).",
-   evidence_keys=[], manifest=["D-008","D-009"]),
+   evidence_keys=[], manifest=["D-008","D-009"], bakeoff=True),
  dict(id="L6", name="Tracing", icon="📡",
    what="LangSmith with tenant/model/sha metadata; the node PATH (incl tool names) is carried in every result and scored (path_sane).",
    why="You can't operate what you can't see. AI-native tracing shows prompts, tool I/O, tokens, and the path — turning prod traces into new eval rows.",
@@ -85,6 +152,21 @@ LAYERS = [
    why="'The evals passed' must MEAN something: invariants at 1.0, judges measured against each other, per-slice regression gate, never pass on missing rows. Braintrust is the dashboard; a committed file is the contract.",
    alts="Vibe-check (no signal) · single judge (unmeasured) · online-only gate (network-coupled CI) · pass-on-average (hides slice regressions).",
    evidence_keys=["schema_valid","confidence_reported"], manifest=["D-014"]),
+ dict(id="L8", name="MCP Integration", icon="🔌",
+   what="Expose the agent's READ tools to MCP clients (Claude Desktop, IDEs, other agents) and consume customer MCP servers — everything flows through the SAME guards + HITL. Published set is derived from the tool registry; action tools are never exposed.",
+   why="MCP hands tools to a client we don't govern, so only reads (tenant/clearance-scoped inside themselves) are safe to publish. A side effect is a decision — it stays behind the approval node. The server refuses to boot if an action tool ever looks read-only (fail loud).",
+   alts="Expose all tools over MCP (a client could fire side effects unapproved) · a bespoke non-standard API (no interop) · no MCP (agent can't compose with the customer's other agents).",
+   evidence_keys=[], manifest=["D-025"], facts=_facts_mcp),
+ dict(id="L9", name="Vector Backend (swappable)", icon="🧩",
+   what="The retrieval contract search(query, tenant, sensitivity, k) is backend-swappable: in-memory BM25 by default (zero-setup), Pinecone via VECTOR_BACKEND=pinecone — namespace-per-tenant, sensitivity as a query-time metadata filter. Callers never branch on the backend.",
+   why="Meet the customer's data where it already lives (Pinecone/Databricks/Snowflake/pgvector) without changing the agent. Tenant isolation stays structural (a query hits ONE namespace); the contract is the seam, so the store is a config choice, not a rewrite.",
+   alts="Hardcode one vector DB (rewrite per customer) · move customer data into our store (residency/governance nightmare) · post-hoc filtering (leakable, not structural).",
+   evidence_keys=[], manifest=["D-024"], facts=_facts_vector),
+ dict(id="L10", name="Infra / Deployment", icon="🚀",
+   what="deploy/ ships three runnable paths: Dockerfile (container/App Runner), template.yaml (AWS SAM → Lambda), hf_endpoint.py (HF Inference Endpoint for open weights). Bedrock runs models in-account for residency.",
+   why="Forward-deployed means it has to RUN in the customer's environment in hours, inside their compliance boundary. Serverless for the API, in-account Bedrock for regulated inference, self-hosted HF for open weights — the residency story is backed by real deploy artifacts, not a diagram.",
+   alts="A notebook demo (never ships) · one cloud only (no residency options) · vendor API only (no in-account path for regulated data).",
+   evidence_keys=[], manifest=["D-027"], facts=_facts_infra),
 ]
 
 def verdict(passed, failed):
@@ -93,6 +175,31 @@ def verdict(passed, failed):
 def bar(v):
     pct = int(round(v*100)); color = "#16a34a" if v>=0.99 else "#ca8a04" if v>=0.7 else "#dc2626"
     return f'<div class="bar"><div class="fill" style="width:{pct}%;background:{color}"></div><span>{pct}%</span></div>'
+
+def facts_table(facts):
+    """Render live-computed evidence facts (label, value, ok) — a ✓/✗ per structural check."""
+    rows = "".join(
+        f'<tr><td>{html.escape(l)}</td><td class="{"ok" if ok else "bad"}">{html.escape(str(val))} '
+        f'{"✓" if ok else "✗"}</td></tr>' for l, val, ok in facts)
+    return f'<table class="ev facts">{rows}</table>'
+
+def bakeoff_table(bo):
+    """Render the REAL bake-off finding as a table. If there's no data, say so — never fabricate (J-02)."""
+    if not bo:
+        return ('<p class="noev">No bake-off data — docs/model-eval-2026-08-19.md not found. '
+                'Not fabricated.</p>')
+    head = "".join(f"<th>{html.escape(m)}</th>" for m in bo["models"])
+    body = ""
+    for name, vals in bo["scorers"]:
+        cells = "".join(f'<td class="{"ok" if abs(x-1.0)<1e-9 else "bad"}">{x:.2f}</td>' for x in vals)
+        body += f'<tr><td class="sl">{html.escape(name)}</td>{cells}</tr>'
+    verdict = (f'{bo["n_scorers"]} deterministic scorers · '
+               + (f'1.00 across ALL {bo["n_models"]} models ✓' if bo["all_ones"]
+                  else 'NOT all 1.00 ✗'))
+    cls = "ok" if bo["all_ones"] else "bad"
+    return (f'<p class="{cls}" style="font-weight:700;margin:0 0 6px">{html.escape(verdict)}</p>'
+            f'<table class="slices bakeoff"><tr><th>scorer</th>{head}</tr>{body}</table>'
+            f'<p class="alt" style="margin-top:4px">source: {html.escape(bo["source"])}</p>')
 
 def build():
     passed, failed, last = run_pytest()
@@ -117,7 +224,18 @@ def build():
         rows = ""
         for k in L["evidence_keys"]:
             if k in overall: rows += f'<tr><td>{k}</td><td>{bar(overall[k])}</td></tr>'
-        if not rows: rows = '<tr><td colspan="2" class="noev">No eval scorer maps directly — evidence via tests + manifest below</td></tr>'
+        has_extra = L.get("facts") or L.get("bakeoff")
+        if not rows and not has_extra:
+            rows = '<tr><td colspan="2" class="noev">No eval scorer maps directly — evidence via tests + manifest below</td></tr>'
+        # live-computed structural facts + the real bake-off finding (J-02: computed, honest if absent)
+        extra = ""
+        if L.get("facts"):
+            try: facts = L["facts"]()
+            except Exception as e: facts = [("evidence check", f"error: {e}", False)]
+            extra += facts_table(facts)
+        if L.get("bakeoff"):
+            extra += bakeoff_table(load_bakeoff())
+        ev_table = f'<table class="ev">{rows}</table>' if rows else ""
         mrows = ""
         for mid in L["manifest"]:
             row = next((r for r in manifest if r["id"]==mid), None)
@@ -131,7 +249,7 @@ def build():
               <h4>Why this choice</h4><p>{html.escape(L["why"])}</p>
               <h4>Alternatives considered</h4><p class="alt">{html.escape(L["alts"])}</p></div>
             <div class="col"><h4>Evidence (from latest eval: {html.escape(exp)})</h4>
-              <table class="ev">{rows}</table>
+              {ev_table}{extra}
               <h4>Governed by</h4><ul class="manifest">{mrows or "<li>—</li>"}</ul></div>
           </div>
         </details>'''
@@ -172,7 +290,8 @@ table.ev td{{padding:4px 0}} .noev{{color:var(--dim);font-style:italic}}
 .bar{{position:relative;background:#0d1420;border:1px solid var(--line);border-radius:5px;height:20px;min-width:120px}}
 .bar .fill{{height:100%;border-radius:4px}} .bar span{{position:absolute;right:6px;top:0;font-size:11px;line-height:20px;color:#fff}}
 ul.manifest{{margin:6px 0 0;padding-left:18px}} ul.manifest li{{font-size:12px;margin:3px 0}}
-.ok{{color:#16a34a}} .sl{{font-weight:600;color:var(--acc)}}
+.ok{{color:#16a34a}} .bad{{color:#f87171;font-weight:600}} .sl{{font-weight:600;color:var(--acc)}}
+table.facts td{{padding:4px 0;font-size:12px}} table.bakeoff td,table.bakeoff th{{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}}
 table.slices th,table.slices td{{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}}
 .docs{{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}} .doc{{background:#1b2740;color:var(--acc);text-decoration:none;padding:5px 10px;border-radius:6px;font-size:12px}}
 .foot{{color:var(--dim);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}}
@@ -191,12 +310,13 @@ table.slices th,table.slices td{{padding:6px 8px;text-align:left;border-bottom:1
   <div class="chip">generated <b>{now}</b></div>
 </div>
 
-<h2>The 7 layers — what, why, alternatives, evidence</h2>
+<h2>The {len(LAYERS)} layers — what, why, alternatives, evidence</h2>
 <p class="sub">Click any layer to drill down. Evidence bars are scorer means from the latest eval run ({html.escape(exp)}).</p>
 {cards}
 
 <h2>Eval scores by slice</h2>
 {"<table class='slices'>"+slice_html+"</table>" if slice_html else "<p class='sub'>No eval run found. Run <code>EXPERIMENT=baseline python -m evals.harness</code> then regenerate.</p>"}
+<p class="sub" style="margin-top:10px">Deterministic scorers (schema, PII, grounding, HITL, budget, path) are the safety <b>invariants</b> — they must read 1.00, and <b>grounding at 1.00 is the real correctness signal</b> (every citation ⊆ retrieved evidence). <code>factual</code> and <code>rubric_pass</code> are LLM-judge <i>quality</i> scores: a correctness rubric that rewards a right answer regardless of extra helpful detail, and still fails a wrong one. Some judge strictness is inherent — treat these as nuance, not pass/fail; the invariants above are pass/fail.</p>
 
 <h2>Design deep-dives</h2>
 <p class="sub">Each layer has a full playbook:</p>

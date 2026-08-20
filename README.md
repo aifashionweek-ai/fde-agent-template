@@ -67,16 +67,32 @@ update.py        regenerates tool_registry.json · drift checks · pytest · [--
 ```
 `python update.py --check` exits non-zero on: a tool in code missing from the schema, a D-row whose test file doesn't exist, any failing test, or (with `--evals`) any deterministic scorer < 1.0, judged scorer < threshold, ECE > 0.15, judge agreement < 0.80, or a slice regressing > 0.05.
 
-## Layout
+## Repository structure
 ```
-agent/   graph.py · state.py · tools.py · guards.py · models.py · retrieval.py · tracing.py · multi.py (A2A supervisor) · prompts.py
-api/     main.py (FastAPI + Mangum; /run /approve /health /contract)
-evals/   dataset.jsonl · scorers.py · run_evals.py · gate.py
-tests/   test_guards.py · test_retrieval.py · test_models.py · test_evals_meta.py
-deploy/  template.yaml (SAM) · Dockerfile · hf_endpoint.py
-scripts/ bedrock_preflight.sh · smoke.sh
-docs/    01–09 playbooks · ARCHITECTURE.md · DEMO-TEMPLATE.md
+.
+├── agent/           # the LangGraph agent — graph, guards, tools, memory, models, retrieval, MCP server
+├── api/             # FastAPI surface (/run · /approve · /health · /contract)
+├── evals/           # golden set (dataset.jsonl), harness, gate, + audit & problem HTML reports
+├── deploy/          # ship it — Dockerfile, SAM template.yaml, hf_endpoint.py (open weights)
+├── scripts/         # bedrock preflight · model bake-off · new-engagement verify · loom demo driver
+├── docs/            # the numbered layer playbooks (01–14) + model-eval + Loom script
+├── tests/           # one catch-proven guard per MANIFEST directive
+├── .claude/         # rules for Claude Code (evals, tools, debugging conventions)
+├── CLAUDE.md        # how an AI agent navigates this repo (commands, architecture, J-01…J-12)
+├── MANIFEST.md      # D-### directives — each one ↔ a test
+├── MASTERSCHEMA.md  # canonical contracts (state, tools, models, routing, scorers)
+└── update.py        # regenerates derived files, drift-checks, runs the gate
 ```
+
+## Scaling — the contract is the seam
+The demo runs zero-setup; production swaps a backend behind the same contract, callers unchanged.
+| Dimension | Demo default | Production (same interface) |
+|---|---|---|
+| Retrieval store | in-memory BM25 | `VECTOR_BACKEND=pinecone` — one namespace per tenant (docs/12) |
+| Model | Anthropic API | Bedrock **in-account** for residency, or an HF endpoint — swap via `MODEL_PROFILE` / `select_model` |
+| API host | `uvicorn` local | AWS Lambda (SAM) or App Runner (Docker) — the graph is stateless, scales horizontally |
+| Corpus | seeded demo docs | `load_dir()` over a mounted folder or object storage |
+| Memory | JSON file | Postgres / DynamoDB (docs/12) |
 
 ## The one-paragraph pitch
 It's a LangGraph agent behind a FastAPI endpoint. Every request passes a layered input guard, gets planned, then runs a bounded plan-act loop against an allowlisted tool set (search, calculate, http_get, sql_query, recall_memory, write_record, remember, human_handoff), pausing for human approval on side effects. Retrieval is routed — tenant, sensitivity, source — before anything is ranked, and only retrieved ids can be cited; the output is schema-validated and grounding-checked before it leaves. The model is a profile chosen by constraints — Anthropic by default, Bedrock when traffic must stay in the customer's account, open weights on Hugging Face when a narrow task or residency demands it. Every run is traced in LangSmith with its path and tenant, and scored in Braintrust against a golden set with calibration and judge-agreement checks; a regression gate blocks the deploy. It's governed by a MANIFEST of directives, a MASTERSCHEMA of contracts, and an `update.py` that refuses to pass unless the guards do.

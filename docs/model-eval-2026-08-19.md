@@ -18,15 +18,20 @@ Same governed agent, same golden set, three models. Deterministic scorers are in
 
 ## Judge scores (quality — LLM judges)
 
+Judge = a **correctness-focused** rubric (`evals/scorers.make_judges`): a right answer scores full marks
+regardless of extra helpful detail, citations are read from the citations field, and a wrong/contradictory
+answer still scores 0. (This replaced `autoevals.Factuality`, whose subset/superset scoring capped a
+correct-but-verbose answer — e.g. `17 × 23 = 391` vs gold `391` — at 0.60. See D-030.)
+
 | Scorer | Claude Haiku 4.5 (closed/API) | Qwen3-32B (open/Bedrock) | Llama3.3-70B (open/Bedrock) |
 |---|---|---|---|
-| factual | 0.60 | 0.56 | 0.34 |
-| rubric_pass | 0.60 | 0.60 | 0.30 |
+| factual | 1.00 | 1.00 | 0.48 |
+| rubric_pass | 0.90 | 0.90 | 0.30 |
 
 ## Finding
 
 **Every deterministic safety scorer is 1.00 across all three models** — schema, PII redaction, grounding, HITL, tenant isolation, budget. The governance layer makes the models interchangeable on the things that must not fail. A residency-constrained customer can run open weights (Qwen/Llama) in-account via Bedrock with zero loss on safety.
 
-The **only** differences are in judge-scored quality (factual, rubric) — where the frontier closed model leads modestly. That is the real, measured open-vs-closed tradeoff: pick open for residency/cost/licensing, closed for peak nuanced quality — and the governance holds either way.
+The differences are in judge-scored quality. With the corrected judge, **Claude (closed) and Qwen3-32B (open) tie at factual 1.00 / rubric 0.90** — a residency-bound customer loses nothing on nuanced quality by running Qwen open-weights in-account. **Llama3.3-70B is genuinely weaker (0.48 / 0.30)**: on several rows it emitted a raw tool-call JSON blob as its final answer instead of completing the ReAct loop, which the judge correctly scores 0 (a real failure, not a rubric artifact — the fix still fails wrong answers). That is the real, measured open-vs-closed picture: the best open model matches closed on this task; a weaker open model does not — and the governance holds for all three either way.
 
 _Reproduce: MODEL_PROFILE=<id> EXPERIMENT=<name> python -m evals.harness, then compare evals/results/bake-*.json. All three verified invoking in-account (Bedrock account 135359468175, us-west-2)._
