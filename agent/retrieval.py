@@ -7,8 +7,8 @@ Rules encoded here (each is a MASTERSCHEMA row + test):
   * Hybrid scoring: BM25 (lexical) + optional embeddings (semantic); cheap first, semantic if available.
   * Returned ids are the ONLY valid citations; output_guard enforces grounding.              (D-012)
 
-Swap the in-memory store for OpenSearch / Pinecone / pgvector by implementing VectorIndex.search();
-the routing contract above does not change — that's the point.
+The store is swappable via VECTOR_BACKEND (memory | pinecone) behind the SAME search() contract; the
+routing rules above do not change — that's the point (D-024). Add OpenSearch/pgvector the same way.
 """
 from __future__ import annotations
 import json, math, os, re, time, hashlib
@@ -84,7 +84,81 @@ class InMemoryIndex:
                  "source": self.chunks[i].source, "sensitivity": self.chunks[i].sensitivity,
                  "score": round(scores[i], 4)} for i in top]
 
-INDEX = InMemoryIndex()
+class PineconeIndex:
+    """Vector backend behind the SAME search() contract as InMemoryIndex (D-024). Namespace-per-tenant
+    gives structural tenant isolation (a query hits ONE namespace); sensitivity is a metadata field
+    filtered at query time; the source allow-list is a metadata filter. Callers are UNCHANGED — they never
+    branch on which backend is active.
+
+    The `pinecone` package is OPTIONAL and imported lazily, so VECTOR_BACKEND=memory works without it and
+    `python update.py --check` / the test suite never require it (same pattern as agent/mcp_server.py's `mcp`).
+    Config: PINECONE_API_KEY, PINECONE_INDEX (default 'fde-agent'). Matches the AIFW production stack (docs/12)."""
+    def __init__(self, index_name: str | None = None):
+        self.index_name = index_name or os.getenv("PINECONE_INDEX", "fde-agent")
+        self.chunks: list[Chunk] = []      # local mirror of what THIS process ingested (empty-check / seed_demo)
+        self._index = None
+
+    def _client(self):
+        if self._index is None:
+            try:
+                from pinecone import Pinecone
+            except ImportError as e:
+                raise ImportError("VECTOR_BACKEND=pinecone requires the pinecone package: "
+                                  "`pip install pinecone` (and set PINECONE_API_KEY / PINECONE_INDEX)") from e
+            self._index = Pinecone(api_key=os.getenv("PINECONE_API_KEY")).Index(self.index_name)
+        return self._index
+
+    def _embed(self, texts: list[str]) -> list[list[float]]:
+        """A vector store needs vectors — embeddings are mandatory here (unlike the BM25 in-memory path).
+        Reuses the OpenAI embedder; overridable/mockable in tests."""
+        from openai import OpenAI
+        r = OpenAI().embeddings.create(model=os.getenv("EMBED_MODEL", "text-embedding-3-small"), input=texts)
+        return [d.embedding for d in r.data]
+
+    def add(self, chunks: Iterable[Chunk]):
+        chunks = list(chunks)
+        if not chunks: return
+        vecs = self._embed([c.text for c in chunks])
+        by_ns: dict[str, list] = {}
+        for c, v in zip(chunks, vecs):
+            by_ns.setdefault(c.tenant, []).append({"id": c.chunk_id, "values": v, "metadata": {
+                "doc_id": c.doc_id, "chunk_id": c.chunk_id, "text": c.text, "source": c.source,
+                "tenant": c.tenant, "sensitivity": c.sensitivity,
+                "sensitivity_level": SENSITIVITY[c.sensitivity], "ingested_at": c.ingested_at}})
+        idx = self._client()
+        for ns, items in by_ns.items(): idx.upsert(vectors=items, namespace=ns)   # namespace = tenant
+        self.chunks.extend(chunks)
+
+    def search(self, query: str, *, tenant: str, max_sensitivity: str = "internal",
+               sources: Optional[set[str]] = None, k: int = 5) -> list[dict]:
+        lvl = SENSITIVITY[max_sensitivity]
+        # ROUTING (D-011): tenant = namespace (isolation); sensitivity ceiling + source allow-list are
+        # metadata filters applied BY the store at query time — never a post-hoc soft filter that can leak.
+        flt: dict = {"sensitivity_level": {"$lte": lvl}}
+        if sources is not None: flt["source"] = {"$in": sorted(sources)}
+        qv = self._embed([query])[0]
+        res = self._client().query(vector=qv, top_k=k, namespace=tenant, filter=flt, include_metadata=True)
+        matches = getattr(res, "matches", None)
+        if matches is None: matches = res.get("matches", []) if isinstance(res, dict) else []
+        out = []
+        for m in matches:
+            md = getattr(m, "metadata", None) or (m.get("metadata", {}) if isinstance(m, dict) else {}) or {}
+            score = getattr(m, "score", None) if not isinstance(m, dict) else m.get("score")
+            out.append({"id": md.get("chunk_id"), "doc_id": md.get("doc_id"), "text": md.get("text"),
+                        "source": md.get("source"), "sensitivity": md.get("sensitivity"),
+                        "score": round(score, 4) if score is not None else None})
+        return out
+
+def make_index():
+    """Pick the retrieval backend from VECTOR_BACKEND: 'memory' (default, zero-setup) | 'pinecone'.
+    The search() contract is identical across backends — this is the ONLY place the choice is made (D-024).
+    Unknown value raises (fail loud, J-04), never silently falls back."""
+    backend = (os.getenv("VECTOR_BACKEND") or "memory").lower()
+    if backend == "pinecone": return PineconeIndex()
+    if backend == "memory":   return InMemoryIndex()
+    raise ValueError(f"unknown VECTOR_BACKEND={backend!r} (expected 'memory' or 'pinecone')")
+
+INDEX = make_index()
 
 def load_dir(path: str, *, tenant: str, source: str, sensitivity: str = "internal") -> int:
     """Ingest a folder of .txt/.md as one tenant+source. Provenance decided by the caller at landing time."""
