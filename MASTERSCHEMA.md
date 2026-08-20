@@ -64,6 +64,16 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | scoring       | BM25 always; + cosine on embeddings if EMBED_PROVIDER set (hybrid 50/50) | — |
 | citations     | only returned chunk ids are legal citations   | D-012 |
 
+## Ingestion (agent/ingest.py) — the stage before retrieval
+| Step | What | Notes |
+|------|------|-------|
+| parse | `unstructured.partition.auto.partition` (REAL, optional dep) | auto-detects PDF/DOCX/HTML/PPTX/images; `fast`=pdfminer (default), `hi_res`=layout+poppler |
+| clean | drop Header/Footer/PageBreak/PageNumber elements; `ftfy` encoding fix; strip blank/page-number lines | real cleaning, not a no-op |
+| chunk | `chunk_document()` — SAME as seed/load_dir | identical tenant/sensitivity provenance tagging |
+| tag  | meta: path, content_hash (sha256[:16]), elements, parser | dedup/lifecycle hooks (D-033 extends with ACLs) |
+| skip | corrupt/empty/unsupported → logged + counted, never raises | `ingest_directory` returns real counts (files, chunks, bytes) |
+Optional extras in requirements-ingest.txt; core + `update.py --check` run without them (D-032).
+
 ## Guard layers (agent/guards.py)
 | Layer | What                                   | Switch                              | Cost   |
 |-------|----------------------------------------|-------------------------------------|--------|

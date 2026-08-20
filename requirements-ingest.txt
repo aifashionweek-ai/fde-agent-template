@@ -1,0 +1,13 @@
+# Document-ingestion extras for agent/ingest.py — installed SEPARATELY from core requirements.txt:
+#     pip install -r requirements-ingest.txt
+#
+# System dependency (NOT pip) — poppler, needed only for the hi_res / image-based PDF strategy
+# (INGEST_STRATEGY=hi_res). The default 'fast' strategy uses pdfminer and needs no system deps.
+#     macOS:   brew install poppler
+#     Debian:  apt-get install poppler-utils
+# For OCR of scanned images (strategy=ocr_only/hi_res) you also need tesseract (brew install tesseract).
+#
+# Kept out of core so `python update.py --check` and the base agent install stay lightweight; agent/ingest.py
+# imports unstructured lazily and raises an actionable error if these aren't present.
+unstructured[pdf]>=0.18
+ftfy>=6
