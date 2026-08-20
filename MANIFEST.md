@@ -22,4 +22,5 @@ A directive that exists only in a chat, a doc, or a slide is a defect. `python u
 | D-016 | Long-term memory: facts persist across threads/sessions, injected as context, upsert by (scope,key), TTL | tests/test_memory.py::test_upsert_by_scope_key, ::test_recall_context_scoped, ::test_ttl_expiry | ✅ |
 | D-017 | Memory is customer data: tenant+user isolation is structural, provenance recorded, right-to-be-forgotten | tests/test_memory.py::test_tenant_user_isolation_is_structural, ::test_forget_right_to_be_forgotten, ::test_provenance_recorded | ✅ |
 | D-018 | Memory WRITES are side effects: remember/human_handoff gated through approval (HITL) | tests/test_guards.py::test_hitl_gate | ✅ |
+| D-019 | Multilayer audit report generated from REAL evidence (results/*.json, live pytest, git); verdict computed not asserted; missing evidence shows honestly | evals/audit_report.py · `make audit` | ✅ |
 | D-0xx | <problem-specific directive from the interview prompt>                    | tests/test_problem.py                                     | ⬜ |

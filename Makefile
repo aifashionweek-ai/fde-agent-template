@@ -10,3 +10,4 @@ hf:        ; python deploy/hf_endpoint.py $(REPO) --gpu $(GPU)
 smoke:     ; bash scripts/smoke.sh
 bakeoff:   ; bash scripts/model_bakeoff.sh $(PROFILES)
 harness:   ; EXPERIMENT=$(EXP) python -m evals.harness
+audit:     ; python -m evals.audit_report

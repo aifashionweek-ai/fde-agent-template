@@ -1,5 +1,7 @@
 # FDE Agent Template — a governed, observable, deployable LangGraph agent
 
+> **Demo domain: Enterprise IT-Ops & Employee Support** — an internal agent that answers employees' access / VPN / HR / finance questions from tenant-scoped runbooks *and takes real remediation actions* (reset access, file tickets, provision resources) under human approval. Two tenant enterprises (Meridian Health, Aristo Energy) and four sensitivity tiers demonstrate multi-tenant isolation and clearance ceilings. Swap the corpus + tools for any customer domain; the governance is unchanged.
+
 > Built for forward-deployed work: drop a production-grade agent into a customer's environment in hours, with the guardrails, evals, tracing and data-routing that make it *safe to leave running*. Every rule is a tested invariant; the deploy refuses to pass if one regresses.
 
 [![check](https://img.shields.io/badge/update.py%20--check-29%20tests%20green-brightgreen)]() [![license](https://img.shields.io/badge/license-MIT-blue)]()
@@ -21,11 +23,14 @@
 ```bash
 make setup                 # deps + .env
 make check                 # update.py: regenerate registry, drift checks, 29 catch-proven tests
-make run                   # http://localhost:8080/docs  → POST /run {"task":"Summarize the refund policy","tenant":"demo"}
+make run                   # http://localhost:8080/docs  → POST /run {"task":"I am locked out of the analytics dashboard, can you help?","tenant":"meridian"}
 EXPERIMENT=baseline make evals && make gate EXP=baseline
 scripts/model_bakeoff.sh claude-sonnet-api claude-haiku-api deepseek-v3.2-bedrock   # one command, one table
 ```
 Works with no keys for `make check`. Add `ANTHROPIC_API_KEY` (or run `make preflight` for Bedrock) for `/run` and evals.
+
+## Audit report — the walkthrough artifact
+`make audit` reads the latest eval results, a live pytest run, the MANIFEST, and git, and writes `evals/results/AUDIT.html`: a 7-layer drill-down (guardrails, retrieval, memory, tools/HITL, model selection, tracing, evals) where each layer shows **what it does, why this choice, the alternatives, and the real evidence**. The verdict is computed from logs, not asserted — a failing layer shows red. It's the artifact you screen-share to walk through the whole agent.
 
 ## The 3-hour build clock (interview / first customer day)
 | T+ | Do | Output |
@@ -51,6 +56,7 @@ Works with no keys for `make check`. Add `ANTHROPIC_API_KEY` (or run `make prefl
 | [08 · Tuning](docs/08-tuning.md) | the ladder (prompt → retrieval → tools → model → fine-tune), one change per experiment, drift |
 | [09 · FDE playbook](docs/09-fde-playbook.md) | discovery → shadow → HITL ramp → rollout gates → what you leave behind |
 | [10 · Agentic memory](docs/10-agentic-memory.md) | the three memory kinds, how each is implemented, memory-as-customer-data, scaling |
+| [11 · Fine-tuning open weights](docs/11-finetuning-open-weights.md) | LoRA/QLoRA with HF PEFT, where training runs (SageMaker/residency), Bedrock Custom Model Import, the runnable scaffold |
 | [Architecture](docs/ARCHITECTURE.md) | diagram + request/data/model/governance paths |
 
 ## Governance in one picture
