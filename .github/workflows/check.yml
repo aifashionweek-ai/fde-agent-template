@@ -1,7 +1,9 @@
 name: check
 on: [push, pull_request]
 jobs:
-  check:
+  check-core:
+    # Bare core install — proves a clean clone works and optional extras (unstructured/mcp/pinecone)
+    # degrade gracefully (ingestion tests importorskip). No API keys needed.
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
@@ -9,4 +11,19 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12", cache: pip }
       - run: pip install -r requirements.txt
-      - run: python update.py --check        # drift + catch-proven guard tests on a BARE core install; optional extras (unstructured/mcp/pinecone) skip cleanly; no API keys needed
+      - run: python update.py --check
+
+  check-full:
+    # Full install (core + ingestion extras) — the ingestion tests actually EXECUTE the real Unstructured
+    # parser here instead of skipping, so CI proves the whole suite green (122).
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OMP_NUM_THREADS: "1"   # torch/onnxruntime load OpenMP; single-thread avoids a teardown mutex race
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: sudo apt-get update && sudo apt-get install -y poppler-utils   # hi_res PDF strategy (fast/pdfminer needs none)
+      - run: pip install -r requirements.txt -r requirements-ingest.txt
+      - run: python update.py --check

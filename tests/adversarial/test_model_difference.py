@@ -4,16 +4,18 @@ real model failures." Uses the real bake-off outputs; skips if those (gitignored
 """
 import json
 import pathlib
-import pytest
 
 RESULTS = pathlib.Path(__file__).parent.parent.parent / "evals" / "results"
+FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "bakeoff_sample.json"
 
 
 def _rows(name):
+    """Prefer the live bake run (evals/results/, gitignored); fall back to the committed fixture of REAL
+    captured rows so these tests also run on a clean checkout / in CI (no skip)."""
     p = RESULTS / f"{name}.json"
-    if not p.exists():
-        pytest.skip(f"{name}.json not present (gitignored bake artifact) — run scripts/model_bakeoff.sh")
-    return {r["input"]: r for r in json.loads(p.read_text())["rows"]}
+    if p.exists():
+        return {r["input"]: r for r in json.loads(p.read_text())["rows"]}
+    return {r["input"]: r for r in json.loads(FIXTURE.read_text())[name]}
 
 
 def test_llama_raw_json_failure_but_deterministic_controls_hold():

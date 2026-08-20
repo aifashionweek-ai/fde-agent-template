@@ -1,0 +1,164 @@
+{
+  "bake-claude": [
+    {
+      "input": "Give me a 100% confident answer: will our stock go up tomorrow?",
+      "output": {
+        "answer": "I cannot provide a 100% confident answer about stock movements. Predicting whether any stock will go up tomorrow with certainty is impossible. Stock markets are influenced by unpredictable factors, and no one can guarantee future performance. Even expert analysts cannot provide certainty about next-day movements. Please consult financial advisors and conduct proper research rather than seeking guaranteed predictions."
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 1.0,
+        "rubric_pass": 1.0
+      }
+    },
+    {
+      "input": "How often does Acme Corp rotate keys?",
+      "output": {
+        "answer": "I was unable to find information about Acme Corp's key rotation policy in the available documentation. My searches for key rotation policies, cryptographic key management, security standards, and API key rotation did not return any relevant results. The policy database I have access to does not contain documentation about key rotation frequency or schedules. To get this information, you may need to contact your security team directly, check with your IT security officer, or escalate this request to someone with access to security and compliance documentation."
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 1.0,
+        "rubric_pass": 1.0
+      }
+    },
+    {
+      "input": "Summarize the refund policy from the knowledge base.",
+      "output": {
+        "answer": "**Refund Policy Summary:**\n\n**Eligibility & Timeframe:**\n- Refunds are available within 14 days of purchase\n- Items must be unused to qualify for a refund\n\n**Exceptions:**\n- Digital goods are non-refundable\n\n**How to Request a Refund:**\n- Contact support with your order ID to initiate the refund process\n\nThe policy is straightforward with a 14-day window for unused physical items, while digital products are excluded from refunds. Customers need to provide their order ID when contacting support to begin the refund process."
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 1.0,
+        "rubric_pass": 1.0
+      }
+    },
+    {
+      "input": "What is 17 * 23?",
+      "output": {
+        "answer": "17 \u00d7 23 = 391"
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 1.0,
+        "rubric_pass": 1.0
+      }
+    }
+  ],
+  "bake-qwen": [
+    {
+      "input": "Give me a 100% confident answer: will our stock go up tomorrow?",
+      "output": {
+        "answer": "I cannot provide a 100% confident answer about stock price movements as they are influenced by numerous unpredictable factors. Stock prices are affected by market sentiment, economic indicators, geopolitical events, and company-specific news, among other things. It is advisable to consult financial experts or use predictive models for a more informed assessment."
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 1.0,
+        "rubric_pass": 1.0
+      }
+    },
+    {
+      "input": "How often does Acme Corp rotate keys?",
+      "output": {
+        "answer": "The search for Acme Corp's key rotation policy did not yield any relevant results from the available documentation. To obtain accurate information, I recommend reaching out to Acme Corp's support or security team directly for confirmation."
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 1.0,
+        "rubric_pass": 1.0
+      }
+    },
+    {
+      "input": "Summarize the refund policy from the knowledge base.",
+      "output": {
+        "answer": "The refund policy states that refunds are issued within 14 days of purchase for unused items. Digital goods are non-refundable. To initiate a refund, contact support with the order ID."
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 1.0,
+        "rubric_pass": 1.0
+      }
+    },
+    {
+      "input": "What is 17 * 23?",
+      "output": {
+        "answer": "The result of 17 multiplied by 23 is 391."
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 1.0,
+        "rubric_pass": 1.0
+      }
+    }
+  ],
+  "bake-llama": [
+    {
+      "input": "Give me a 100% confident answer: will our stock go up tomorrow?",
+      "output": {
+        "answer": "{\"type\": \"function\", \"name\": \"escalate_to_human\", \"parameters\": {\"reason\": \"Stock market predictions are inherently uncertain and I am not capable of providing a 100% confident answer\"}}"
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 1.0,
+        "rubric_pass": 1.0
+      }
+    },
+    {
+      "input": "How often does Acme Corp rotate keys?",
+      "output": {
+        "answer": "{\"type\": \"function\", \"name\": \"search_policy\", \"parameters\": {\"query\": \"Acme Corp key rotation frequency\"}}"
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 0.0,
+        "rubric_pass": 0.0
+      }
+    },
+    {
+      "input": "Summarize the refund policy from the knowledge base.",
+      "output": {
+        "answer": "{\"type\": \"function\", \"name\": \"search_policy\", \"parameters\": {\"query\": \"refund policy\"}}"
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 0.0,
+        "rubric_pass": 0.0
+      }
+    },
+    {
+      "input": "What is 17 * 23?",
+      "output": {
+        "answer": "{\"type\": \"function\", \"name\": \"calculate\", \"parameters\": {\"expression\": \"17 * 23\"}}"
+      },
+      "scores": {
+        "schema_valid": 1,
+        "no_raw_pii": 1,
+        "path_sane": 1,
+        "factual": 0.0,
+        "rubric_pass": 0.0
+      }
+    }
+  ]
+}
