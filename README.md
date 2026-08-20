@@ -103,6 +103,15 @@ sensitivity routing, tracing, the eval gate, and the MANIFEST→test governance.
 **Demo-scale by design**: corpus size and the in-memory index — swapped by env, no code change. The point of
 the template is that the *governance* is production-grade on day one; the *data plane* grows into the customer's.
 
+## Document ingestion — real, not a demo stub
+`agent/ingest.py` parses real enterprise documents with **Unstructured.io** (Apache-2.0, the library
+production RAG teams use): `partition()` auto-detects PDF/DOCX/HTML/PPTX/images → strip header/footer
+boilerplate → `ftfy` clean → the same `chunk_document()` provenance tagging as the rest of the pipeline.
+**Verified on real PDFs** — 3 public NIST documents → 615 retrievable chunks; see
+[docs/INGESTION-PROOF.md](docs/INGESTION-PROOF.md) for the actual output. Optional install (kept out of
+core so `update.py --check` runs without it): `pip install -r requirements-ingest.txt` (+ `brew install
+poppler` for the hi_res strategy). Without it the core runs fine and ingestion raises a clear, actionable error.
+
 ## The one-paragraph pitch
 It's a LangGraph agent behind a FastAPI endpoint. Every request passes a layered input guard, gets planned, then runs a bounded plan-act loop against an allowlisted tool set (search, calculate, http_get, sql_query, recall_memory, write_record, remember, human_handoff), pausing for human approval on side effects. Retrieval is routed — tenant, sensitivity, source — before anything is ranked, and only retrieved ids can be cited; the output is schema-validated and grounding-checked before it leaves. The model is a profile chosen by constraints — Anthropic by default, Bedrock when traffic must stay in the customer's account, open weights on Hugging Face when a narrow task or residency demands it. Every run is traced in LangSmith with its path and tenant, and scored in Braintrust against a golden set with calibration and judge-agreement checks; a regression gate blocks the deploy. It's governed by a MANIFEST of directives, a MASTERSCHEMA of contracts, and an `update.py` that refuses to pass unless the guards do.
 
