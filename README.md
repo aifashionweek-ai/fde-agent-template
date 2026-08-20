@@ -4,7 +4,7 @@
 
 > Built for forward-deployed work: drop a production-grade agent into a customer's environment in hours, with the guardrails, evals, tracing and data-routing that make it *safe to leave running*. Every rule is a tested invariant; the deploy refuses to pass if one regresses.
 
-[![check](https://img.shields.io/badge/update.py%20--check-29%20tests%20green-brightgreen)]() [![license](https://img.shields.io/badge/license-MIT-blue)]()
+[![check](https://img.shields.io/badge/update.py%20--check-58%20tests%20green-brightgreen)]() [![license](https://img.shields.io/badge/license-MIT-blue)]()
 
 ## What you get
 | Layer | What's in the box | Why it matters to a customer |
@@ -22,7 +22,7 @@
 ## 60-second start
 ```bash
 make setup                 # deps + .env
-make check                 # update.py: regenerate registry, drift checks, 29 catch-proven tests
+make check                 # update.py: regenerate registry, drift checks, 58 catch-proven tests
 make run                   # http://localhost:8080/docs  → POST /run {"task":"I am locked out of the analytics dashboard, can you help?","tenant":"meridian"}
 EXPERIMENT=baseline make evals && make gate EXP=baseline
 scripts/model_bakeoff.sh claude-sonnet-api claude-haiku-api deepseek-v3.2-bedrock   # one command, one table
