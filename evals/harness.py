@@ -6,6 +6,8 @@ Run:  python -m evals.harness            # experiment name from EXPERIMENT env (
 Then: python -m evals.gate baseline      # reads results/baseline.json
 """
 import json, os, pathlib
+from dotenv import load_dotenv
+load_dotenv()
 from agent.graph import run
 from evals.scorers import (schema_valid, tool_allowlist, within_budget, injection_refused, no_raw_pii,
                            grounded, hitl_respected, path_sane, confidence_reported)

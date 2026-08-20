@@ -23,7 +23,7 @@ A directive that exists only in a chat, a doc, or a slide is a defect. `python u
 | D-017 | Memory is customer data: tenant+user isolation is structural, provenance recorded, right-to-be-forgotten | tests/test_memory.py::test_tenant_user_isolation_is_structural, ::test_forget_right_to_be_forgotten, ::test_provenance_recorded | ✅ |
 | D-018 | Memory WRITES are side effects: remember/human_handoff gated through approval (HITL) | tests/test_guards.py::test_hitl_gate | ✅ |
 | D-019 | Multilayer audit report generated from REAL evidence (results/*.json, live pytest, git); verdict computed not asserted; missing evidence shows honestly | evals/audit_report.py · `make audit` | ✅ |
-| D-020 | Model bake-off: 3 models on IT-Ops golden set. Deterministic scorers 1.00 across ALL (Claude/Qwen/Llama) — governance is model-independent | evals/results/bake-*.json · docs/model-eval-2026-08-19.md | 🟡 |
+| D-020 | Model bake-off: 3 models on IT-Ops golden set. Deterministic scorers 1.00 across ALL (Claude/Qwen/Llama) — governance is model-independent | evals/harness.py | 🟡 |
 | D-021 | LLM-judge scores need .env loaded in harness (Braintrust key); valid only when judges=[factual,rubric_pass] AND values vary. bake-claude valid; qwen/llama re-run | evals/harness.py | 🟡 |
 | D-022 | Qwen3-32B on Bedrock: Converse bind_tools tool-calling FAILS (ValidationException); Llama3.3-70B + Claude work. Finding: not all open Bedrock models support agent tool-use | agent/models.py | 🟡 |
 | D-023 | Data platform mapping: retrieval=vector store (Pinecone default), sql_query=warehouse (Snowflake/Databricks/Oracle), memory=Postgres/Dynamo; contract unchanged | docs/12-data-platforms.md | ⬜ |

@@ -24,7 +24,10 @@ def search_policy(query: str) -> str:
 @tool
 def lookup_employee(employee_id: str) -> str:
     """Look up an employee's directory record (name, dept, manager, schedule). Read-only, tenant-scoped."""
-    from .directory import lookup
+    try:
+        from agent.directory import lookup
+    except ImportError:
+        from .directory import lookup
     return json.dumps(lookup(os.getenv("TENANT", "meridian"), employee_id))
 
 @tool

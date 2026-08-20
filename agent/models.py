@@ -39,9 +39,15 @@ class ModelProfile:
             return ChatAnthropic(model=self.model, temperature=temperature, max_tokens=max_tokens)
         if self.provider == "bedrock":
             from langchain_aws import ChatBedrockConverse
-            return ChatBedrockConverse(model=self.model, region_name=os.getenv("AWS_REGION", "us-west-2"),
-                                       temperature=temperature, max_tokens=max_tokens,
-                                       guardrail_config=_bedrock_guardrail())
+            kwargs = dict(model_id=self.model, region_name=os.getenv("AWS_REGION", "us-west-2"),
+                          temperature=temperature, max_tokens=max_tokens)
+            gc = _bedrock_guardrail()
+            if gc: kwargs["guardrail_config"] = gc
+            # provider hint helps ChatBedrockConverse resolve inference-profile ids (us.*) correctly
+            if "anthropic" in self.model: kwargs["provider"] = "anthropic"
+            elif "meta" in self.model or "llama" in self.model: kwargs["provider"] = "meta"
+            elif "qwen" in self.model: kwargs["provider"] = "qwen"
+            return ChatBedrockConverse(**kwargs)
         if self.provider == "hf":
             from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
             ep = HuggingFaceEndpoint(endpoint_url=os.getenv("HF_ENDPOINT_URL") or None,
