@@ -217,7 +217,7 @@ def build():
     exp = payload.get("experiment","(none)") if payload else "(no eval run yet)"
     model = payload.get("model_profile","?") if payload else "?"
     judges = ", ".join(payload.get("judges",[])) if payload else "none"
-    now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     def layer_card(L):
         # evidence: pull the layer's scorer means from the latest eval

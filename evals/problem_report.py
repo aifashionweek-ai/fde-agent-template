@@ -67,7 +67,7 @@ def _ranked(surfaces):
 def render(problem: dict) -> str:
     ranked = _ranked(problem["surfaces"])
     build_first = ranked[0]["name"] if ranked else "—"
-    now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     def li(items):
         return "".join(f"<li>{html.escape(x)}</li>" for x in items)
