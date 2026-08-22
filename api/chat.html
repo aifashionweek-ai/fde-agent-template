@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FDE Agent — governed chat</title>
+<style>
+  :root { --ink:#1a1a2e; --mut:#6b7280; --line:#e5e7eb; --amber:#b45309; --amber-bg:#fffbeb;
+          --green:#166534; --green-bg:#f0fdf4; --red:#991b1b; --red-bg:#fef2f2; --chip:#eef2ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 -apple-system, "Segoe UI", sans-serif; color:var(--ink); background:#fafafa; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 140px; }
+  h1 { font-size:18px; margin:0 0 2px; }
+  .sub { color:var(--mut); font-size:13px; margin-bottom:20px; }
+  .msg { border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin:10px 0; background:#fff; }
+  .msg.user { background:#f3f4f6; }
+  .who { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin-bottom:4px; }
+  .answer { white-space:pre-wrap; }
+  .meta { margin-top:8px; font-size:12px; color:var(--mut); }
+  .chips span { display:inline-block; background:var(--chip); border-radius:6px; padding:1px 7px;
+                margin:2px 3px 0 0; font-family:ui-monospace, monospace; font-size:11px; }
+  .approval { border:1px solid #fcd34d; background:var(--amber-bg); }
+  .approval .who { color:var(--amber); }
+  .call { font-family:ui-monospace, monospace; font-size:13px; background:#fff; border:1px solid var(--line);
+          border-radius:6px; padding:8px 10px; margin:6px 0; overflow-x:auto; }
+  .hash { font-family:ui-monospace, monospace; font-size:11px; color:var(--mut); word-break:break-all; }
+  .hash b { color:var(--ink); }
+  button { font:inherit; border:1px solid var(--line); border-radius:8px; padding:6px 14px; cursor:pointer; background:#fff; }
+  button.ok { background:var(--green-bg); border-color:#86efac; color:var(--green); }
+  button.no { background:var(--red-bg); border-color:#fca5a5; color:var(--red); }
+  button:disabled { opacity:.45; cursor:default; }
+  .denied { border-color:#fca5a5; background:var(--red-bg); }
+  form { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line); padding:14px 16px; }
+  .row { max-width:760px; margin:0 auto; display:flex; gap:8px; }
+  input[type=text] { flex:1; font:inherit; padding:9px 12px; border:1px solid var(--line); border-radius:8px; }
+  .err { color:var(--red); font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>FDE Agent — governed chat</h1>
+  <div class="sub">
+    Thin client over <code>POST /run</code> + <code>POST /approve</code>. Side effects pause for
+    <b>your</b> approval; you approve the exact <b>proposal hashes</b> shown (D-034/D-038) — a mutated
+    action can’t ride your click. <span id="env"></span> · thread <code id="tid"></code>
+    <button id="newthread" style="font-size:12px;padding:2px 8px">new thread</button>
+  </div>
+  <div id="log"></div>
+</main>
+<form id="f">
+  <div class="row">
+    <input id="task" type="text" placeholder="e.g. I am locked out of the vpn, reset my access" autocomplete="off" autofocus>
+    <button type="submit" id="send">Send</button>
+  </div>
+</form>
+
+<script>
+let tid = crypto.randomUUID();
+const $ = id => document.getElementById(id);
+const log = $("log");
+
+function el(html, cls) { const d = document.createElement("div"); d.className = "msg " + (cls||""); d.innerHTML = html; log.appendChild(d); d.scrollIntoView({block:"end"}); return d; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function showThread() { $("tid").textContent = tid.slice(0, 8); }
+showThread();
+$("newthread").onclick = () => { tid = crypto.randomUUID(); showThread(); el("<div class='who'>system</div>new thread started"); };
+
+fetch("/health").then(r => r.json()).then(h =>
+  $("env").textContent = `tenant ${h.tenant} · ${h.provider}`).catch(() => {});
+
+function renderResult(res) {
+  const denied = /Denied by human|REFUSED|not approved/.test(res.answer);
+  const chips = (res.trace?.path || []).map(p => `<span>${esc(p)}</span>`).join("");
+  el(`<div class="who">agent</div><div class="answer">${esc(res.answer)}</div>
+      <div class="meta">confidence ${res.confidence}
+        ${res.citations?.length ? " · cites " + esc(res.citations.join(", ")) : ""}</div>
+      <div class="meta chips">path: ${chips}</div>`, denied ? "denied" : "");
+}
+
+// The interrupt payload is {pending_tool_calls, proposal_hashes, question} — render EXACTLY what
+// the human is approving, and echo those same hashes back (the D-038 binding).
+function renderApproval(payload) {
+  const calls = (payload.pending_tool_calls || [])
+    .map(c => `<div class="call">${esc(c.name)}(${esc(JSON.stringify(c.args))})</div>`).join("");
+  const hashes = payload.proposal_hashes || [];
+  const hashHtml = hashes.map(h => `<div class="hash"><b>${esc(h.slice(0,16))}</b>${esc(h.slice(16))}</div>`).join("");
+  const box = el(`<div class="who">approval required — agent proposes, you dispose</div>
+      ${calls}<div class="meta">you are approving these proposal hashes (sha256 of tool|args|principal|tenant|run):</div>
+      ${hashHtml}
+      <div style="margin-top:10px"><button class="ok">Approve</button> <button class="no">Deny</button></div>`, "approval");
+  box.querySelector(".ok").onclick = () => decide(box, true, hashes);
+  box.querySelector(".no").onclick = () => decide(box, false, hashes);
+}
+
+async function decide(box, approve, hashes) {
+  box.querySelectorAll("button").forEach(b => b.disabled = true);
+  box.querySelector(".who").textContent += approve ? " → approved" : " → denied";
+  await call("/approve", { thread_id: tid, approve, hashes: hashes });
+}
+
+async function call(url, body) {
+  try {
+    const r = await fetch(url, { method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body) });
+    const out = await r.json();
+    if (!r.ok) { el(`<div class="who">error</div><div class="err">${esc(JSON.stringify(out))}</div>`); return; }
+    if (out.status === "interrupted") renderApproval(out.state[0].value);
+    else if (out.result) renderResult(out.result);
+    else el(`<div class="who">agent</div>${esc(JSON.stringify(out))}`);
+  } catch (e) { el(`<div class="who">error</div><div class="err">${esc(e)}</div>`); }
+}
+
+$("f").onsubmit = async e => {
+  e.preventDefault();
+  const task = $("task").value.trim();
+  if (!task) return;
+  $("task").value = "";
+  el(`<div class="who">you</div>${esc(task)}`, "user");
+  $("send").disabled = true;
+  await call("/run", { task, thread_id: tid });
+  $("send").disabled = false;
+};
+</script>
+</body>
+</html>

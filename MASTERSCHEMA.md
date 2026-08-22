@@ -82,6 +82,15 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | wire protocol (D-038) | interrupt payload = `{pending_tool_calls, proposal_hashes, question}`; `/approve` = `{thread_id, approve, hashes}` — approval grants the hashes the human SAW, never what is pending at resume time; a proposal mutated after being shown is REFUSED at execution. `/approve` may return another `interrupted` (further/changed proposal), never a 500. A new run on a reused thread clears the stale `result` |
 | enforced in | graph `approval` node records approved hashes; `traced_tools` classifies EXECUTE/REFUSE/SKIP |
 
+## Interfaces (api/main.py) — how anything talks to the agent
+| Route | What | Notes |
+|-------|------|-------|
+| `POST /run` | `{task, thread_id?, tenant?}` → result+trace, or `{status: interrupted, state}` | tenant field is TRACE-only; the enforcement principal is env/gateway (D-033 trust boundary) |
+| `POST /approve` | `{thread_id, approve, hashes}` → result+trace, or another `interrupted` | hashes = what the human SAW (D-038); never 500s on a follow-up interrupt |
+| `GET /` | chat UI (`api/chat.html`, D-039) | static HTML+fetch, no framework; renders pending_tool_calls + proposal_hashes + trace path; approve echoes the SEEN hashes |
+| `GET /health` · `GET /contract` | liveness · AgentOutput JSON schema | /contract is the A2A contract surface |
+MCP (`agent/mcp_server.py`) publishes READ tools only (D-025) — the governed graph is NEVER exposed over MCP (no approval channel over stdio).
+
 ## Ingestion (agent/ingest.py) — the stage before retrieval
 | Step | What | Notes |
 |------|------|-------|

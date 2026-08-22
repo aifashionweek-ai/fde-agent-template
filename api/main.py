@@ -1,6 +1,7 @@
 """FastAPI surface. Local: uvicorn api.main:app --reload. AWS: Lambda via Mangum (deploy/template.yaml) or App Runner (deploy/Dockerfile)."""
-import os, uuid
+import os, pathlib, uuid
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from langgraph.types import Command
 from agent.graph import graph, run
@@ -25,6 +26,10 @@ class ApproveReq(BaseModel):
     thread_id: str
     approve: bool
     hashes: list[str] = []         # D-038: the proposal_hashes the human SAW (from the interrupt payload)
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def chat_ui():                                           # D-039: governance-visible local chat over /run + /approve
+    return (pathlib.Path(__file__).parent / "chat.html").read_text()
 
 @app.get("/health")
 def health(): return {"ok": True, "provider": os.getenv("LLM_PROVIDER","anthropic"), "model_profile": os.getenv("MODEL_PROFILE"), "tenant": os.getenv("TENANT","demo")}
