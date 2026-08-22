@@ -69,15 +69,16 @@ is open (tenant + sensitivity still apply).
 
 ## 3. Test state
 
-- **129 passing** (full local run; 122 + 3 D-037 ACL-parity + 4 D-038 HITL-wire tests). `python update.py --check` is the gate: regenerates
+- **135 passing** (full local run; 122 + D-037 ACL-parity (3) + D-038 HITL-wire (4) + D-039 chat UI (2) +
+  D-040 A2A (4)). `python update.py --check` is the gate: regenerates
   `agent/tool_registry.json` from `MASTERSCHEMA.md`, drift-checks, runs pytest.
 - **CI: two jobs, both green on `7254df3`** (`.github/workflows/check.yml`):
   - `check-core` — `requirements.txt` only → **112 passed, 2 skipped** (the 2 ingestion test modules
     `importorskip` `unstructured`; proves a clean clone works + optional deps degrade gracefully).
   - `check-full` — `+ requirements-ingest.txt` + poppler, `OMP_NUM_THREADS=1` → **122 passed** (ingestion
     tests actually execute the real Unstructured parser).
-- **38 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
-  D-032…D-038, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
+- **40 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
+  D-032…D-040, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
   `D-0xx` is the intentional problem-specific slot (open). Every other row has a catch-proven guard.
 
 ---
@@ -145,7 +146,10 @@ untouched. `python scripts/verify_new_engagement.py` proves the 4-slot swap stil
   (skip/add/replace/dedup/delete); doc ACLs; optional dep (imported lazily).
 - `mcp_server.py` (D-025) — publishes READ tools only; action tools stay behind HITL.
 
-**API + deploy** — `api/main.py` (FastAPI: `/run` `/approve` `/health` `/contract`). `deploy/` (Dockerfile, SAM `template.yaml`, `hf_endpoint.py`).
+**API + deploy** — `api/main.py` (FastAPI: `/` chat UI · `/run` · `/approve` `{approve, hashes}` D-038 ·
+`/health` · `/contract`). `api/chat.html` (D-039: static governance-visible chat — proposal + hashes +
+approve/deny + trace path, no framework). `agent/a2a.py` + `scripts/a2a_demo.py` (D-040: calling agent —
+interrupts propagate, release only via approval_channel). `deploy/` (Dockerfile, SAM `template.yaml`, `hf_endpoint.py`).
 
 **Evals + reports (`evals/`)**
 - `dataset.jsonl` (golden set) · `scorers.py` (deterministic + LLM judges; `make_judges` correctness rubric, D-030) · `harness.py` (writes `results/*.json`) · `gate.py` (offline threshold gate) · `run_evals.py` (Braintrust push) · `rescore.py` (re-score captured bake outputs).

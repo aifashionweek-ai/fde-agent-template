@@ -90,6 +90,7 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | `GET /` | chat UI (`api/chat.html`, D-039) | static HTML+fetch, no framework; renders pending_tool_calls + proposal_hashes + trace path; approve echoes the SEEN hashes |
 | `GET /health` · `GET /contract` | liveness · AgentOutput JSON schema | /contract is the A2A contract surface |
 MCP (`agent/mcp_server.py`) publishes READ tools only (D-025) — the governed graph is NEVER exposed over MCP (no approval channel over stdio).
+A2A (`agent/a2a.py`, D-040): a calling agent uses `POST /run`; interrupts propagate — release requires its `approval_channel` (human/policy) echoing the seen hashes; abstain = deny.
 
 ## Ingestion (agent/ingest.py) — the stage before retrieval
 | Step | What | Notes |
