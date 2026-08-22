@@ -69,10 +69,15 @@ def policy_channel(allow_tools: set[str]):
 
 
 def console_channel(proposal: Proposal) -> bool:
-    """A human at a terminal: show exactly what would run and the hashes being approved, ask y/n."""
+    """A human at a terminal: show exactly what would run and the hashes being approved, ask y/n.
+    A closed/absent stdin (EOF) is a DENIAL, not a crash — no input means no approval (fail closed)."""
     print("\n=== APPROVAL REQUIRED (agent-initiated) ===")
     for tc in proposal.pending_tool_calls:
         print(f"  {tc['name']}({json.dumps(tc.get('args', {}))})")
     for h in proposal.proposal_hashes:
         print(f"  proposal_hash {h}")
-    return input("approve? [y/N] ").strip().lower() == "y"
+    try:
+        return input("approve? [y/N] ").strip().lower() == "y"
+    except EOFError:
+        print("(no input — denied)")
+        return False

@@ -1,5 +1,6 @@
-.PHONY: setup check evals gate run deploy preflight hf smoke bakeoff harness audit problem mcp
+.PHONY: setup check evals gate run demo deploy preflight hf smoke bakeoff harness audit problem mcp
 setup:     ; pip install -r requirements.txt && cp -n .env.example .env || true
+demo:      ; bash demo.sh
 check:     ; python update.py --check
 evals:     ; python -m evals.run_evals
 gate:      ; python -m evals.gate $(EXP) $(BASE)
