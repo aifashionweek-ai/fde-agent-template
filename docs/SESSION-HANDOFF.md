@@ -69,15 +69,15 @@ is open (tenant + sensitivity still apply).
 
 ## 3. Test state
 
-- **125 passing** (full local run; 122 + 3 D-037 ACL-parity tests). `python update.py --check` is the gate: regenerates
+- **129 passing** (full local run; 122 + 3 D-037 ACL-parity + 4 D-038 HITL-wire tests). `python update.py --check` is the gate: regenerates
   `agent/tool_registry.json` from `MASTERSCHEMA.md`, drift-checks, runs pytest.
 - **CI: two jobs, both green on `7254df3`** (`.github/workflows/check.yml`):
   - `check-core` — `requirements.txt` only → **112 passed, 2 skipped** (the 2 ingestion test modules
     `importorskip` `unstructured`; proves a clean clone works + optional deps degrade gracefully).
   - `check-full` — `+ requirements-ingest.txt` + poppler, `OMP_NUM_THREADS=1` → **122 passed** (ingestion
     tests actually execute the real Unstructured parser).
-- **37 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
-  D-032…D-037, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
+- **38 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
+  D-032…D-038, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
   `D-0xx` is the intentional problem-specific slot (open). Every other row has a catch-proven guard.
 
 ---
@@ -90,9 +90,13 @@ is open (tenant + sensitivity still apply).
    a leak, not just over-restriction. Proven red-first against a filter-evaluating fake Pinecone; now
    `$exists:false OR $in` + ACL upserted. Guard: `tests/test_retrieval_backend.py::test_acl_decision_parity_with_in_memory`
    asserts both backends make the SAME access decision across the matrix. MANIFEST row D-037 (37 rows now, 125 tests).
-2. **No graph-level integration test.** Approval integrity is catch-proven at the *primitive* level
-   (`classify_execution`), but the `traced_tools` wiring isn't covered by a test that runs the actual graph
-   (needs a stubbed LLM). Add one so the wiring itself is guarded.
+2. ~~**No graph-level integration test.**~~ **FIXED (D-038, 2026-08-22).** `tests/test_api_hitl.py` drives
+   the REAL graph through the REAL FastAPI surface (TestClient, only the LLM scripted): /run → interrupted →
+   /approve → executes once → replay → idempotent skip → deny → nothing. Red-first, it caught two real
+   wiring bugs: (a) the wire protocol had NO binding — /approve approved whatever was pending at resume
+   time, so a state-tampered proposal (alice→bob) executed on the human's approval; now the interrupt
+   payload carries `proposal_hashes` and /approve `{approve, hashes}` grants only what the human SAW.
+   (b) a reused thread replayed the stale `result` instead of running the new task — `run()` now clears it.
 3. **Trust boundary is assumed, not implemented** — no real IdP/token-signature verification (documented as
    such). Fine for the artifact; be ready to explain the boundary crisply.
 4. **LangSmith is observability, not a durable compliance audit log.** A regulated deployment needs an

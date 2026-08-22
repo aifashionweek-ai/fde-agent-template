@@ -24,6 +24,7 @@ class RunReq(BaseModel):
 class ApproveReq(BaseModel):
     thread_id: str
     approve: bool
+    hashes: list[str] = []         # D-038: the proposal_hashes the human SAW (from the interrupt payload)
 
 @app.get("/health")
 def health(): return {"ok": True, "provider": os.getenv("LLM_PROVIDER","anthropic"), "model_profile": os.getenv("MODEL_PROFILE"), "tenant": os.getenv("TENANT","demo")}
@@ -35,11 +36,16 @@ def run_agent(req: RunReq):
     return {"thread_id": tid, **({"result": out} if "answer" in out else out)}
 
 @app.post("/approve")
-def approve(req: ApproveReq):                            # D-004 resume after human decision
+def approve(req: ApproveReq):                            # D-004 resume + D-038 approval binds to what was seen
     cfg = {"configurable": {"thread_id": req.thread_id}}
-    out = graph.invoke(Command(resume=req.approve), config=cfg)
-    if not out.get("result"): raise HTTPException(500, "no result after resume")
-    return {"thread_id": req.thread_id, "result": out["result"]}
+    out = graph.invoke(Command(resume={"approve": req.approve, "hashes": req.hashes}), config=cfg)
+    res = out.get("result")
+    if res:
+        res = {**res, "trace": {"path": out.get("path", []), "steps": out.get("step_count"), "tool_calls": out.get("tool_calls")}}
+        return {"thread_id": req.thread_id, "result": res}
+    # The resumed run hit ANOTHER interrupt (a further proposal, or a re-proposal after state changed) —
+    # surface it exactly like /run does, never a 500: the human decides again on what they now see.
+    return {"thread_id": req.thread_id, "status": "interrupted", "state": out.get("__interrupt__"), "path": out.get("path", [])}
 
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")

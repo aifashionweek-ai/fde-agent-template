@@ -79,6 +79,7 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | proposal_hash | sha256(tool \| normalized_args \| principal \| tenant \| run_id) — the human approves THIS hash |
 | bind | at execution, recompute from actual args; not-in-approved ⇒ REFUSED (args changed after approval) |
 | idempotency | each executed hash recorded; replay/resume ⇒ idempotent skip (side effect fires once) |
+| wire protocol (D-038) | interrupt payload = `{pending_tool_calls, proposal_hashes, question}`; `/approve` = `{thread_id, approve, hashes}` — approval grants the hashes the human SAW, never what is pending at resume time; a proposal mutated after being shown is REFUSED at execution. `/approve` may return another `interrupted` (further/changed proposal), never a 500. A new run on a reused thread clears the stale `result` |
 | enforced in | graph `approval` node records approved hashes; `traced_tools` classifies EXECUTE/REFUSE/SKIP |
 
 ## Ingestion (agent/ingest.py) — the stage before retrieval

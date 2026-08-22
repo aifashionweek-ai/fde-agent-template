@@ -70,10 +70,19 @@ def approval(s: AgentState):                            # D-004 human-in-the-loo
     approved = list(set(s.get("approved", [])) | hashes)
     if os.getenv("DEMO_AUTOAPPROVE") == "1":            # smooth demos only; real deployments keep this off
         return {"needs_approval": False, "approved": approved, "path": s.get("path", []) + ["approval(auto)"]}
-    decision = interrupt({"pending_tool_calls": last.tool_calls, "question": "Approve side-effect tool call(s)?"})
-    if decision is not True:
+    decision = interrupt({"pending_tool_calls": last.tool_calls, "proposal_hashes": sorted(hashes),
+                          "question": "Approve side-effect tool call(s)?"})
+    # D-038: over the wire the decision is {"approve": bool, "hashes": [...]} — the hashes the human SAW
+    # in the interrupt payload. Approval grants THOSE, not whatever is pending at resume time, so a
+    # proposal mutated after being shown can never execute on that approval (tools recomputes and refuses).
+    # A bare True (in-process/legacy resume) grants the recomputed pending set.
+    if isinstance(decision, dict):
+        ok, granted = decision.get("approve") is True, set(decision.get("hashes") or [])
+    else:
+        ok, granted = decision is True, hashes
+    if not ok:
         return {"messages": [ToolMessage(content="Denied by human.", tool_call_id=tc["id"]) for tc in last.tool_calls], "needs_approval": False}
-    return {"needs_approval": False, "approved": approved}
+    return {"needs_approval": False, "approved": list(set(s.get("approved", [])) | granted)}
 
 @node_span("finalize")
 def finalize(s: AgentState):
@@ -139,7 +148,9 @@ graph = build_graph()
 def run(task: str, thread_id: str = "default", tenant: str | None = None) -> dict:
     cfg = {"configurable": {"thread_id": thread_id}, "recursion_limit": int(os.getenv("MAX_STEPS", 12)) * 3,
            **tag_run(thread_id=thread_id, tenant=tenant or os.getenv("TENANT", "demo"))}
-    out = graph.invoke({"task": task, "path": [], "run_id": thread_id}, config=cfg)
+    # result=None clears the PREVIOUS run's result on a reused thread — without it, route_after_guard
+    # sees the stale result and short-circuits guard_input -> finalize, replaying the old answer (D-038).
+    out = graph.invoke({"task": task, "path": [], "run_id": thread_id, "result": None}, config=cfg)
     res = out.get("result")
     if res: res = {**res, "trace": {"path": out.get("path", []), "steps": out.get("step_count"), "tool_calls": out.get("tool_calls")}}
     return res or {"status": "interrupted", "state": out.get("__interrupt__"), "path": out.get("path", [])}
