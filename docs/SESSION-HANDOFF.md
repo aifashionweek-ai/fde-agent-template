@@ -69,8 +69,9 @@ is open (tenant + sensitivity still apply).
 
 ## 3. Test state
 
-- **135 passing** (full local run; 122 + D-037 ACL-parity (3) + D-038 HITL-wire (4) + D-039 chat UI (2) +
-  D-040 A2A (4)). `python update.py --check` is the gate: regenerates
+- **138 passing, 0 warnings** (full local run; 122 + D-037 ACL-parity (3) + D-038 HITL-wire (4) +
+  D-039 chat UI (2) + D-040 A2A (4) + directory (3 — `agent/directory.py`, a smoke-found P0: the module
+  didn't exist and `lookup_employee` 500'd the first real /run). `python update.py --check` is the gate: regenerates
   `agent/tool_registry.json` from `MASTERSCHEMA.md`, drift-checks, runs pytest.
 - **CI: two jobs, both green on `7254df3`** (`.github/workflows/check.yml`):
   - `check-core` — `requirements.txt` only → **112 passed, 2 skipped** (the 2 ingestion test modules
