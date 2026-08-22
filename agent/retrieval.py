@@ -136,10 +136,15 @@ class PineconeIndex:
         vecs = self._embed([c.text for c in chunks])
         by_ns: dict[str, list] = {}
         for c, v in zip(chunks, vecs):
-            by_ns.setdefault(c.tenant, []).append({"id": c.chunk_id, "values": v, "metadata": {
-                "doc_id": c.doc_id, "chunk_id": c.chunk_id, "text": c.text, "source": c.source,
-                "tenant": c.tenant, "sensitivity": c.sensitivity,
-                "sensitivity_level": SENSITIVITY[c.sensitivity], "ingested_at": c.ingested_at}})
+            md = {"doc_id": c.doc_id, "chunk_id": c.chunk_id, "text": c.text, "source": c.source,
+                  "tenant": c.tenant, "sensitivity": c.sensitivity,
+                  "sensitivity_level": SENSITIVITY[c.sensitivity], "ingested_at": c.ingested_at}
+            # Doc ACL (D-036/D-037): allowed_groups must land in the store's metadata or the query-time
+            # filter has nothing to enforce. An open doc (empty/missing ACL) stores NO field — that absence
+            # is what the $exists:false arm of the search filter matches.
+            acl = (c.meta or {}).get("allowed_groups")
+            if acl: md["allowed_groups"] = sorted(acl)
+            by_ns.setdefault(c.tenant, []).append({"id": c.chunk_id, "values": v, "metadata": md})
         idx = self._client()
         for ns, items in by_ns.items(): idx.upsert(vectors=items, namespace=ns)   # namespace = tenant
         self.chunks.extend(chunks)
@@ -151,7 +156,15 @@ class PineconeIndex:
         # group ACL are metadata filters applied BY the store at query time — never a post-hoc soft filter.
         flt: dict = {"sensitivity_level": {"$lte": lvl}}
         if sources is not None: flt["source"] = {"$in": sorted(sources)}
-        if groups: flt["allowed_groups"] = {"$in": sorted(groups)}   # doc ACL: chunk's allowed_groups ∩ caller groups
+        # Doc ACL (D-036/D-037) — MUST match _group_ok: a doc with NO allowed_groups is open to everyone;
+        # an ACL'd doc needs allowed_groups ∩ caller groups; a caller with no groups sees only open docs.
+        # A bare {$in: groups} is wrong twice over: it drops open docs (field absent → no match) and,
+        # when omitted for a no-groups caller, leaks ACL'd docs. Guarded by test_acl_decision_parity_with_in_memory.
+        if groups:
+            flt = {"$and": [flt, {"$or": [{"allowed_groups": {"$exists": False}},
+                                          {"allowed_groups": {"$in": sorted(groups)}}]}]}
+        else:
+            flt["allowed_groups"] = {"$exists": False}
         qv = self._embed([query])[0]
         res = self._client().query(vector=qv, top_k=k, namespace=tenant, filter=flt, include_metadata=True)
         matches = getattr(res, "matches", None)

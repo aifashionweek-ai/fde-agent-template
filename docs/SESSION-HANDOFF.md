@@ -69,25 +69,27 @@ is open (tenant + sensitivity still apply).
 
 ## 3. Test state
 
-- **122 passing** (full local run). `python update.py --check` is the gate: regenerates
+- **125 passing** (full local run; 122 + 3 D-037 ACL-parity tests). `python update.py --check` is the gate: regenerates
   `agent/tool_registry.json` from `MASTERSCHEMA.md`, drift-checks, runs pytest.
 - **CI: two jobs, both green on `7254df3`** (`.github/workflows/check.yml`):
   - `check-core` — `requirements.txt` only → **112 passed, 2 skipped** (the 2 ingestion test modules
     `importorskip` `unstructured`; proves a clean clone works + optional deps degrade gracefully).
   - `check-full` — `+ requirements-ingest.txt` + poppler, `OMP_NUM_THREADS=1` → **122 passed** (ingestion
     tests actually execute the real Unstructured parser).
-- **36 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
-  D-032…D-036, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
+- **37 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
+  D-032…D-037, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
   `D-0xx` is the intentional problem-specific slot (open). Every other row has a catch-proven guard.
 
 ---
 
 ## 4. What I'd improve before the next coding exercise (honest)
 
-1. **Pinecone group-ACL gap.** In-memory retrieval handles "open doc = no `allowed_groups`" correctly
-   (`_group_ok`), but the Pinecone branch adds an `allowed_groups: {$in: [...]}` metadata filter that would
-   **exclude docs with no ACL field** when a group filter is applied. The tested path (in-memory) is
-   correct; the Pinecone branch isn't fully exercised. Fix + test first.
+1. ~~**Pinecone group-ACL gap.**~~ **FIXED (D-037, 2026-08-22).** The Pinecone branch had TWO divergences
+   from in-memory `_group_ok`: the bare `allowed_groups: {$in: [...]}` filter excluded open docs (no ACL
+   field), AND `add()` never upserted `allowed_groups` / no filter was applied for a no-groups caller —
+   a leak, not just over-restriction. Proven red-first against a filter-evaluating fake Pinecone; now
+   `$exists:false OR $in` + ACL upserted. Guard: `tests/test_retrieval_backend.py::test_acl_decision_parity_with_in_memory`
+   asserts both backends make the SAME access decision across the matrix. MANIFEST row D-037 (37 rows now, 125 tests).
 2. **No graph-level integration test.** Approval integrity is catch-proven at the *primitive* level
    (`classify_execution`), but the `traced_tools` wiring isn't covered by a test that runs the actual graph
    (needs a stubbed LLM). Add one so the wiring itself is guarded.

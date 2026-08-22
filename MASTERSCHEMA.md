@@ -63,6 +63,8 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | provenance    | doc_id, chunk_id, source, tenant, sensitivity, ingested_at on every chunk | D-010 |
 | scoring       | BM25 always; + cosine on embeddings if EMBED_PROVIDER set (hybrid 50/50) | — |
 | citations     | only returned chunk ids are legal citations   | D-012 |
+| group ACL     | no `allowed_groups` = open; else needs ∩ caller groups; no-groups caller sees only open docs | D-036 |
+| backend parity| in-memory `_group_ok` and Pinecone filter make the SAME access decision across the matrix (open / right-group / wrong-group / no-groups / cross-tenant). Pinecone: `add()` upserts `allowed_groups`; `search()` filters `$exists:false OR $in` — never a bare `$in` | D-037 |
 
 ## Identity & authorization (agent/identity.py, agent/authz.py) — the CONTROL plane
 | Piece | What | Notes |

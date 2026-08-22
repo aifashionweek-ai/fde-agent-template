@@ -80,6 +80,114 @@ def test_pinecone_search_routes_through_client(monkeypatch):
     assert hits and set(hits[0]) == {"id", "doc_id", "text", "source", "sensitivity", "score"}
 
 
+def _pinecone_filter_match(md: dict, flt: dict) -> bool:
+    """Evaluate a Pinecone metadata filter the way the real store does (Mongo-style semantics):
+    top-level keys AND together; $and/$or combine sub-filters; an ABSENT field matches nothing
+    except `$exists: false`. Only the operators this repo uses are implemented — anything else raises."""
+    for key, cond in flt.items():
+        if key == "$and":
+            if not all(_pinecone_filter_match(md, c) for c in cond): return False
+        elif key == "$or":
+            if not any(_pinecone_filter_match(md, c) for c in cond): return False
+        else:
+            present, val = key in md, md.get(key)
+            for op, arg in cond.items():
+                if op == "$exists":
+                    if present != bool(arg): return False
+                elif not present:
+                    return False
+                elif op == "$lte":
+                    if not val <= arg: return False
+                elif op == "$in":
+                    vals = val if isinstance(val, list) else [val]
+                    if not any(v in arg for v in vals): return False
+                else:
+                    raise ValueError(f"unsupported filter op {op}")
+    return True
+
+
+def _install_semantic_pinecone(monkeypatch):
+    """A fake Pinecone that STORES upserts per namespace and EVALUATES query filters — so ACL tests
+    exercise real filter behavior against real metadata, not just the filter's shape."""
+    fake = types.ModuleType("pinecone")
+    store: dict[str, list] = {}
+
+    class FakeIndex:
+        def upsert(self, vectors, namespace=None):
+            store.setdefault(namespace, []).extend((v["id"], v["metadata"]) for v in vectors)
+
+        def query(self, *, vector, top_k, namespace, filter, include_metadata):
+            ms = [{"id": cid, "score": 0.5, "metadata": md}
+                  for cid, md in store.get(namespace, []) if _pinecone_filter_match(md, filter or {})]
+            return {"matches": ms[:top_k]}
+
+    class Pinecone:
+        def __init__(self, api_key=None): pass
+        def Index(self, name): return FakeIndex()
+
+    fake.Pinecone = Pinecone
+    monkeypatch.setitem(sys.modules, "pinecone", fake)
+
+
+def _semantic_pinecone_index(monkeypatch):
+    _install_semantic_pinecone(monkeypatch)
+    monkeypatch.setenv("VECTOR_BACKEND", "pinecone")
+    idx = r.make_index()
+    monkeypatch.setattr(type(idx), "_embed", lambda self, texts: [[0.0, 0.0, 0.0] for _ in texts])
+    return idx
+
+
+def _seed_acl_corpus(idx):
+    """One open doc, one group-ACL'd doc, one cross-tenant doc — the D-036 access matrix."""
+    idx.add(r.chunk_document("open-doc", "VPN reset steps, visible to any meridian employee.",
+                             source="policies", tenant="meridian"))
+    idx.add(r.chunk_document("legal-doc", "Legal hold procedure, legal team only.",
+                             source="policies", tenant="meridian", meta={"allowed_groups": ["legal"]}))
+    idx.add(r.chunk_document("acme-doc", "Acme internal runbook.", source="policies", tenant="acme"))
+
+
+def _visible_docs(idx, *, tenant, groups):
+    return {h["doc_id"] for h in idx.search("reset legal runbook", tenant=tenant,
+                                            max_sensitivity="internal", groups=groups, k=10)}
+
+
+def test_pinecone_open_doc_visible_under_group_filter(monkeypatch):
+    """THE GAP (handoff item 1): an OPEN doc (no allowed_groups) must stay visible to a caller WITH
+    groups — in-memory _group_ok returns True for it; a bare `allowed_groups: {$in: groups}` filter
+    wrongly excludes it because the field doesn't exist on open docs."""
+    idx = _semantic_pinecone_index(monkeypatch)
+    _seed_acl_corpus(idx)
+    seen = _visible_docs(idx, tenant="meridian", groups={"engineering"})
+    assert "open-doc" in seen          # open doc must not vanish under a group filter
+    assert "legal-doc" not in seen     # wrong group still never sees the ACL'd doc
+
+
+def test_pinecone_acl_doc_hidden_from_caller_without_groups(monkeypatch):
+    """The WORSE half of the gap: with groups=None the old code applied NO ACL filter at all, leaking
+    ACL'd docs to a caller with no groups — in-memory _group_ok denies them (bool(None & acl) is False)."""
+    idx = _semantic_pinecone_index(monkeypatch)
+    _seed_acl_corpus(idx)
+    seen = _visible_docs(idx, tenant="meridian", groups=None)
+    assert "legal-doc" not in seen     # no groups -> only open docs
+    assert "open-doc" in seen
+
+
+def test_acl_decision_parity_with_in_memory(monkeypatch):
+    """D-037 guard: BOTH backends make the SAME access decision across the whole matrix —
+    open doc, right-group, wrong-group, no-groups caller, cross-tenant. One semantics, two stores."""
+    mem = r.InMemoryIndex()
+    _seed_acl_corpus(mem)
+    pc = _semantic_pinecone_index(monkeypatch)
+    _seed_acl_corpus(pc)
+    matrix = [("right-group", {"legal"}), ("wrong-group", {"engineering"}),
+              ("multi-group", {"legal", "sales"}), ("no-groups", None)]
+    for name, groups in matrix:
+        for tenant in ("meridian", "acme"):
+            mem_seen = _visible_docs(mem, tenant=tenant, groups=groups)
+            pc_seen = _visible_docs(pc, tenant=tenant, groups=groups)
+            assert mem_seen == pc_seen, f"{name}/{tenant}: memory={mem_seen} pinecone={pc_seen}"
+
+
 def test_pinecone_add_upserts_per_tenant_namespace(monkeypatch):
     captured = {}
     _install_fake_pinecone(monkeypatch, captured)
