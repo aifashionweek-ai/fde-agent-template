@@ -69,17 +69,20 @@ is open (tenant + sensitivity still apply).
 
 ## 3. Test state
 
-- **138 passing, 0 warnings** (full local run; 122 + D-037 ACL-parity (3) + D-038 HITL-wire (4) +
-  D-039 chat UI (2) + D-040 A2A (4) + directory (3 — `agent/directory.py`, a smoke-found P0: the module
-  didn't exist and `lookup_employee` 500'd the first real /run). `python update.py --check` is the gate: regenerates
+- **144 passing, 0 warnings** (full local run; 122 + D-037 ACL-parity (3) + D-038 HITL-wire (4) +
+  D-039 chat UI (3) + D-040 A2A (4) + directory (3 — smoke-found P0: `agent/directory.py` didn't exist,
+  `lookup_employee` 500'd the first real /run) + D-041 multi-turn/errors (5 — live-found P0: turn 2 on a
+  thread 500'd because the system prompt was PERSISTED per turn; now bound at the model call, exactly one
+  system message per act call; pending approval blocks new input; no bare plain-text 500s anywhere).
+  `python update.py --check` is the gate: regenerates
   `agent/tool_registry.json` from `MASTERSCHEMA.md`, drift-checks, runs pytest.
 - **CI: two jobs, both green on `7254df3`** (`.github/workflows/check.yml`):
   - `check-core` — `requirements.txt` only → **112 passed, 2 skipped** (the 2 ingestion test modules
     `importorskip` `unstructured`; proves a clean clone works + optional deps degrade gracefully).
   - `check-full` — `+ requirements-ingest.txt` + poppler, `OMP_NUM_THREADS=1` → **122 passed** (ingestion
     tests actually execute the real Unstructured parser).
-- **40 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
-  D-032…D-040, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
+- **41 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
+  D-032…D-041, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
   `D-0xx` is the intentional problem-specific slot (open). Every other row has a catch-proven guard.
 
 ---

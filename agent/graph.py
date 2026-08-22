@@ -31,10 +31,12 @@ def guard_input(s: AgentState):
     principal = principal_from_env()                              # D-033: who is calling (from the auth'd gateway)
     tenant, user = principal.tenant_id, principal.user_id
     mem = recall_context(tenant, user, clean)                     # D-016: long-term memory injected as context
-    msgs = [SystemMessage(SYSTEM.format(task_context=os.getenv("TASK_CONTEXT","general"))), HumanMessage(clean)]
-    if mem: msgs.insert(1, SystemMessage(mem))
+    # D-041: system prompt + memory context are NOT persisted into checkpointed messages — act binds
+    # them at the model call. Persisting them once-per-turn made turn 2 on a thread carry
+    # system → history → system, which the Anthropic formatter rejects (live multi-turn 500).
     return {"task": clean, "step_count": 0, "tool_calls": 0, "errors": [],
-            "principal": principal.as_claims(), "messages": msgs}
+            "principal": principal.as_claims(), "memory_ctx": mem or "",
+            "messages": [HumanMessage(clean)]}
 
 @node_span("plan")
 def plan(s: AgentState):
@@ -45,6 +47,13 @@ def plan(s: AgentState):
     return {"plan": steps, "step_count": s.get("step_count",0)+1,
             "messages": [HumanMessage(f"Plan: {json.dumps(steps)}. Execute it.")]}
 
+def _system_message(s: AgentState) -> SystemMessage:
+    """The single system message, built fresh per model call (D-041) — never stored in state, so a
+    multi-turn thread can never accumulate duplicates. Memory context (D-016) rides inside it."""
+    sys = SYSTEM.format(task_context=os.getenv("TASK_CONTEXT", "general"))
+    if s.get("memory_ctx"): sys += "\n\n" + s["memory_ctx"]
+    return SystemMessage(sys)
+
 @node_span("act")
 def act(s: AgentState):
     try:
@@ -52,7 +61,7 @@ def act(s: AgentState):
     except GuardError as e:                               # D-001/D-007: budget breach is a RESULT, not an outage
         return {"errors": s.get("errors",[]) + [str(e)],
                 "result": {"answer": f"Stopped: {e}", "confidence": 0.0, "citations": [], "actions": []}}
-    msg = llm().bind_tools(TOOLS).invoke(s["messages"])
+    msg = llm().bind_tools(TOOLS).invoke([_system_message(s)] + s["messages"])
     tcs = getattr(msg, "tool_calls", []) or []
     return {"messages": [msg], "step_count": s["step_count"]+1, "tool_calls": s.get("tool_calls",0)+len(tcs),
             "needs_approval": any(tool_needs_approval(tc["name"]) for tc in tcs)}
@@ -148,6 +157,13 @@ graph = build_graph()
 def run(task: str, thread_id: str = "default", tenant: str | None = None) -> dict:
     cfg = {"configurable": {"thread_id": thread_id}, "recursion_limit": int(os.getenv("MAX_STEPS", 12)) * 3,
            **tag_run(thread_id=thread_id, tenant=tenant or os.getenv("TENANT", "demo"))}
+    # D-041: a thread with an UNDECIDED approval refuses new input — you can't talk past a pending
+    # proposal (and abandoning its un-answered tool_use breaks the provider's message contract).
+    # The same proposal is returned; deciding it via /approve unblocks the thread.
+    snap = graph.get_state(cfg)
+    pending = [i for t in getattr(snap, "tasks", ()) or () for i in getattr(t, "interrupts", ()) or ()]
+    if pending:
+        return {"status": "pending_approval", "state": pending, "path": (snap.values or {}).get("path", [])}
     # result=None clears the PREVIOUS run's result on a reused thread — without it, route_after_guard
     # sees the stale result and short-circuits guard_input -> finalize, replaying the old answer (D-038).
     out = graph.invoke({"task": task, "path": [], "run_id": thread_id, "result": None}, config=cfg)

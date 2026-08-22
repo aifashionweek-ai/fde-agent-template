@@ -102,9 +102,16 @@ async function decide(box, approve, hashes) {
 async function call(url, body) {
   try {
     const r = await fetch(url, { method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body) });
-    const out = await r.json();
-    if (!r.ok) { el(`<div class="who">error</div><div class="err">${esc(JSON.stringify(out))}</div>`); return; }
-    if (out.status === "interrupted") renderApproval(out.state[0].value);
+    // Never parse blindly (D-041): a crash/proxy can return non-JSON — read text, parse defensively,
+    // and render status + body in the error card instead of throwing a SyntaxError.
+    const text = await r.text();
+    let out = null;
+    try { out = JSON.parse(text); } catch (_) {}
+    if (!r.ok || out === null) {
+      el(`<div class="who">error</div><div class="err">HTTP ${r.status}: ${esc(out ? JSON.stringify(out) : text.slice(0, 600))}</div>`);
+      return;
+    }
+    if (out.status === "interrupted" || out.status === "pending_approval") renderApproval(out.state[0].value);
     else if (out.result) renderResult(out.result);
     else el(`<div class="who">agent</div>${esc(JSON.stringify(out))}`);
   } catch (e) { el(`<div class="who">error</div><div class="err">${esc(e)}</div>`); }

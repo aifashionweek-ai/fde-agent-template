@@ -31,6 +31,13 @@ a vaguer ask can make it pass `employee_id: "self"`, which the authz layer then 
 | Ask the same thing again on the SAME thread, approve again → **idempotent skip** | "Approved once means executed at most once — a replayed approval is a recorded no-op, not a second reset." |
 | Click **Deny** on a fresh proposal → "Denied by human", nothing executed | "Deny is a first-class outcome, not an error." |
 
+**Multi-turn (same thread — D-041).** Threads are conversational: tell it *"my badge number is 7741"*,
+then ask *"what badge number did I give you?"* — it answers from the thread history (the system prompt
+is bound per model call, never persisted, so turns can't corrupt the message contract). And if you type
+a new message **while an approval card is pending**, the agent refuses to move on — it returns the SAME
+undecided proposal (`status: pending_approval`): *"you can't talk past a pending approval; a human
+decision is a blocking step, not a suggestion."*
+
 ## Beat 2 — A2A: another agent initiates, the gate holds (~2 min)
 
 Terminal 2:
@@ -60,7 +67,9 @@ alice's hashes, mutate the pending state to bob, bob never runs.
 ## Reset between takes
 
 - **Fresh proposal**: click **new thread** in the UI (fresh `thread_id` = fresh `run_id` = fresh
-  hashes); `a2a_demo.py` generates a fresh thread every invocation. No server work needed.
+  hashes); `a2a_demo.py` generates a fresh thread every invocation. No server work needed. Staying on
+  the same thread is also fine — that's the multi-turn beat; just remember a re-approved identical
+  action is an idempotent skip by design.
 - **Full reset**: Ctrl-C and rerun `demo.sh` — the checkpointer (`MemorySaver`) and approval/executed
   sets are in-process, so a restart wipes everything.
 - Long-term memory only persists if a `remember` proposal was *approved* (`.local/memory.json` —

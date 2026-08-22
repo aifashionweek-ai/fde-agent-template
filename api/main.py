@@ -1,7 +1,7 @@
 """FastAPI surface. Local: uvicorn api.main:app --reload. AWS: Lambda via Mangum (deploy/template.yaml) or App Runner (deploy/Dockerfile)."""
-import os, pathlib, uuid
+import os, pathlib, traceback, uuid
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from langgraph.types import Command
 from agent.graph import graph, run
@@ -34,16 +34,29 @@ def chat_ui():                                           # D-039: governance-vis
 @app.get("/health")
 def health(): return {"ok": True, "provider": os.getenv("LLM_PROVIDER","anthropic"), "model_profile": os.getenv("MODEL_PROFILE"), "tenant": os.getenv("TENANT","demo")}
 
+def _structured_500(thread_id: str, e: Exception) -> JSONResponse:
+    """D-041: an unexpected exception is a STRUCTURED result, never a bare plain-text 500 — the client
+    (chat UI, A2A caller, curl) always gets JSON it can render. Full traceback to the server log (J-12)."""
+    traceback.print_exc()
+    return JSONResponse(status_code=500, content={
+        "error": type(e).__name__, "thread_id": thread_id, "detail": str(e)})
+
 @app.post("/run", response_model=None)
 def run_agent(req: RunReq):
     tid = req.thread_id or str(uuid.uuid4())
-    out = run(req.task, thread_id=tid, tenant=req.tenant)
+    try:
+        out = run(req.task, thread_id=tid, tenant=req.tenant)
+    except Exception as e:
+        return _structured_500(tid, e)
     return {"thread_id": tid, **({"result": out} if "answer" in out else out)}
 
 @app.post("/approve")
 def approve(req: ApproveReq):                            # D-004 resume + D-038 approval binds to what was seen
     cfg = {"configurable": {"thread_id": req.thread_id}}
-    out = graph.invoke(Command(resume={"approve": req.approve, "hashes": req.hashes}), config=cfg)
+    try:
+        out = graph.invoke(Command(resume={"approve": req.approve, "hashes": req.hashes}), config=cfg)
+    except Exception as e:
+        return _structured_500(req.thread_id, e)
     res = out.get("result")
     if res:
         res = {**res, "trace": {"path": out.get("path", []), "steps": out.get("step_count"), "tool_calls": out.get("tool_calls")}}

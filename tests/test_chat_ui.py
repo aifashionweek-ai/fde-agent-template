@@ -22,3 +22,13 @@ def test_chat_page_wires_the_approval_binding():
     assert "hashes:" in html                             # /approve body carries the SEEN hashes (D-038)
     assert "pending_tool_calls" in html                  # shows the exact proposed action
     assert "path" in html                                # trace path visible — governance on screen
+
+
+def test_chat_page_never_blind_parses_responses():
+    """D-041: a non-JSON or non-2xx response must land in the error card, never a SyntaxError.
+    Source-level guard: the client reads text and parses defensively — a bare `await r.json()`
+    (blind parse) is banned."""
+    html = client.get("/").text
+    assert "await r.json()" not in html                  # blind parse would throw on a plain-text 500
+    assert "JSON.parse(text)" in html                    # defensive parse of the text body
+    assert "r.ok" in html                                # status checked before treating it as a result

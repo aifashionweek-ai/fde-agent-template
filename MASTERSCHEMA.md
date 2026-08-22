@@ -85,7 +85,8 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 ## Interfaces (api/main.py) — how anything talks to the agent
 | Route | What | Notes |
 |-------|------|-------|
-| `POST /run` | `{task, thread_id?, tenant?}` → result+trace, or `{status: interrupted, state}` | tenant field is TRACE-only; the enforcement principal is env/gateway (D-033 trust boundary) |
+| `POST /run` | `{task, thread_id?, tenant?}` → result+trace, or `{status: interrupted, state}`; on a thread with an undecided approval → `{status: pending_approval, state}` (same proposal — decide it first, D-041) | tenant field is TRACE-only; the enforcement principal is env/gateway (D-033 trust boundary). Multi-turn: reuse thread_id; system prompt + memory ctx are bound at the model call, never persisted (exactly one system message per call, D-041) |
+| errors | ANY unexpected exception → `500 {error, thread_id, detail}` JSON — never a plain-text 500 (D-041) | full traceback to server log (J-12); chat client parses defensively (no blind `r.json()`) |
 | `POST /approve` | `{thread_id, approve, hashes}` → result+trace, or another `interrupted` | hashes = what the human SAW (D-038); never 500s on a follow-up interrupt |
 | `GET /` | chat UI (`api/chat.html`, D-039) | static HTML+fetch, no framework; renders pending_tool_calls + proposal_hashes + trace path; approve echoes the SEEN hashes |
 | `GET /health` · `GET /contract` | liveness · AgentOutput JSON schema | /contract is the A2A contract surface |

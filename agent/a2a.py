@@ -46,7 +46,7 @@ class A2ACaller:
         tid = thread_id or str(uuid.uuid4())
         out = self.transport.post("/run", json={"task": task, "thread_id": tid}).json()
         for _ in range(self.MAX_APPROVAL_ROUNDS):
-            if out.get("status") != "interrupted":
+            if out.get("status") not in ("interrupted", "pending_approval"):
                 return out
             payload = out["state"][0]["value"]
             proposal = Proposal(tid, payload.get("pending_tool_calls", []),
