@@ -106,6 +106,23 @@ def test_new_input_on_pending_approval_returns_the_proposal_not_a_crash(env):
     assert "queued" in res["result"]["answer"]
 
 
+def test_crafted_tool_loop_returns_cleanly_not_unbounded(env):
+    """D-001/D-007 confirming (graph-level): a model that proposes a read tool forever is bounded —
+    budget_guard in act stops it (recursion_limit is the backstop). RETURNS a structured result, never hangs."""
+    class LoopLLM:
+        def bind_tools(self, tools): return self
+        def invoke(self, x):
+            if isinstance(x, str): return AIMessage(content='["loop"]')
+            return AIMessage(content="", tool_calls=[{"name": "calculate",
+                "args": {"expression": "1+1"}, "id": "c", "type": "tool_call"}])
+    env.setattr(g, "_llm", LoopLLM())
+    client = TestClient(app)
+    r = client.post("/run", json={"task": "loop forever", "thread_id": str(uuid.uuid4())})
+    assert r.status_code == 200
+    out = r.json()["result"]
+    assert out["confidence"] == 0.0 and "Stopped" in out["answer"]   # bounded, clean, structured
+
+
 def test_run_unexpected_exception_is_structured_json(env):
     def boom(*a, **k):
         raise RuntimeError("synthetic failure")

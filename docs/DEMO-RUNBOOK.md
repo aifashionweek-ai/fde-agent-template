@@ -83,3 +83,9 @@ alice's hashes, mutate the pending state to bob, bob never runs.
    of who-approved-which-hash-when — a durable store, not a tracing dashboard.
 3. **MCP**: stays read-only (D-025) — the governed graph is never published over MCP because stdio
    cannot round-trip the approval interrupt; agent callers use the HTTP contract (D-040).
+4. **Data-egress control**: side effects are HITL-gated (a human sees the action before it fires), but
+   there is no **destination allowlist / DLP** on tool args yet — an approved tool could in principle
+   send data anywhere. Production adds a DLP layer (see `docs/HARDENING-BACKLOG.md`, Integration plane).
+
+The full red-team posture — proven invariants, fixes, and scoped gaps by severity — is in
+[`docs/HARDENING-BACKLOG.md`](HARDENING-BACKLOG.md).
