@@ -91,6 +91,17 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 | `POST /approve` | `{thread_id, approve, hashes}` → result+trace, or another `interrupted` | hashes = what the human SAW (D-038); never 500s on a follow-up interrupt |
 | `GET /` | chat UI (`api/chat.html`, D-039) | static HTML+fetch, no framework; renders pending_tool_calls + proposal_hashes + trace path; approve echoes the SEEN hashes |
 | `GET /health` · `GET /contract` | liveness · AgentOutput JSON schema | /contract is the A2A contract surface |
+| `GET /trace/{thread_id}` | last run's per-layer spans + totals (D-044) | tokens/latency/cost per node; for the dashboard |
+| `GET /dashboard` · `GET /fixtures/runs` · `GET /fixtures/mcp` | observability UI + captured offline demo data (D-044) | dashboard renders spans; fixtures let the demo run without live model calls |
+
+## Telemetry spans (agent/telemetry.py) — D-044, observability only
+| Field | What | Notes |
+|-------|------|-------|
+| layer, kind | node name · MODEL\|CODE | plan/act = MODEL; guard_input/tools/approval_gate/finalize = CODE |
+| tokens_in/out | REAL provider usage_metadata via RecordingLLM proxy | CODE layers = 0; totals sum to run tokens (not estimated) |
+| latency_ms, cost_usd | measured per span; cost at configurable rate | COST_PER_1M_INPUT / COST_PER_1M_OUTPUT env |
+| status | PASS \| GATED \| DENIED \| REFUSED \| SWAYED | GATED=interrupt; DENIED=authz; REFUSED=hash unbound/replay; SWAYED=action denied after untrusted retrieval (D-043) |
+| tools[] | per side-effect: redacted args, result, proposal_hash, recomputed_hash, hash_match | makes the D-034 binding visible; args PII-redacted, principal never emitted |
 MCP (`agent/mcp_server.py`) publishes READ tools only (D-025) — the governed graph is NEVER exposed over MCP (no approval channel over stdio).
 A2A (`agent/a2a.py`, D-040): a calling agent uses `POST /run`; interrupts propagate — release requires its `approval_channel` (human/policy) echoing the seen hashes; abstain = deny.
 

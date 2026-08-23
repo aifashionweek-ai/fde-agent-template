@@ -117,6 +117,7 @@ def route_after_approval(s):
     last = s["messages"][-1]
     return "tools" if getattr(last, "tool_calls", None) else "act"
 
+@node_span("tools")                                       # D-044: telemetry span (path label set below is preserved)
 def traced_tools(s: AgentState):
     """Wrap ToolNode so tool names land in the trace path (D-013) AND enforce approval integrity +
     idempotency (D-034): a side-effect call executes only if its proposal hash was approved and hasn't run
@@ -168,5 +169,17 @@ def run(task: str, thread_id: str = "default", tenant: str | None = None) -> dic
     # sees the stale result and short-circuits guard_input -> finalize, replaying the old answer (D-038).
     out = graph.invoke({"task": task, "path": [], "run_id": thread_id, "result": None}, config=cfg)
     res = out.get("result")
-    if res: res = {**res, "trace": {"path": out.get("path", []), "steps": out.get("step_count"), "tool_calls": out.get("tool_calls")}}
+    if res: res = {**res, "trace": _trace(out, thread_id)}
     return res or {"status": "interrupted", "state": out.get("__interrupt__"), "path": out.get("path", [])}
+
+def _trace(out: dict, thread_id: str) -> dict:
+    """Assemble the trace block: node path + step/tool counts, plus the D-044 per-layer spans and run
+    totals (real tokens/latency/cost) from the telemetry recorder if present."""
+    t = {"path": out.get("path", []), "steps": out.get("step_count"), "tool_calls": out.get("tool_calls")}
+    try:
+        from . import telemetry
+        rec = telemetry.last_run(thread_id)
+        if rec: t["spans"] = rec["spans"]; t["totals"] = rec["totals"]
+    except Exception:
+        pass
+    return t

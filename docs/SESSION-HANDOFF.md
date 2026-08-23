@@ -69,7 +69,9 @@ is open (tenant + sensitivity still apply).
 
 ## 3. Test state
 
-- **153 passing, 0 warnings** (full local run). Recent adds: D-037 ACL-parity, D-038 HITL-wire,
+- **160 passing, 0 warnings** (full local run). NOTE: D-044 observability lives on branch
+  `feat/observability-evals` (off tag `freeze-pre-observability`), not yet merged to main — main is at 153.
+  Recent adds: D-037 ACL-parity, D-038 HITL-wire,
   D-039 chat UI, D-040 A2A, D-041 multi-turn/errors (turn-2 system-prompt-persist 500 → bound at the model
   call), **D-042 identity normalization** (self-approval deny-bypass via case/whitespace/homoglyph — real
   control bypass, fixed), **D-043 indirect-injection-through-retrieval** (poisoned doc obeyed by a swayed

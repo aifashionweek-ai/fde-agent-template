@@ -1,5 +1,5 @@
 """FastAPI surface. Local: uvicorn api.main:app --reload. AWS: Lambda via Mangum (deploy/template.yaml) or App Runner (deploy/Dockerfile)."""
-import os, pathlib, traceback, uuid
+import json, os, pathlib, traceback, uuid
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
@@ -59,11 +59,38 @@ def approve(req: ApproveReq):                            # D-004 resume + D-038 
         return _structured_500(req.thread_id, e)
     res = out.get("result")
     if res:
-        res = {**res, "trace": {"path": out.get("path", []), "steps": out.get("step_count"), "tool_calls": out.get("tool_calls")}}
+        from agent.graph import _trace
+        res = {**res, "trace": _trace(out, req.thread_id)}
         return {"thread_id": req.thread_id, "result": res}
     # The resumed run hit ANOTHER interrupt (a further proposal, or a re-proposal after state changed) —
     # surface it exactly like /run does, never a 500: the human decides again on what they now see.
     return {"thread_id": req.thread_id, "status": "interrupted", "state": out.get("__interrupt__"), "path": out.get("path", [])}
+
+@app.get("/trace/{thread_id}")
+def get_trace(thread_id: str):                           # D-044: last run's per-layer spans for the dashboard
+    from agent import telemetry
+    rec = telemetry.last_run(thread_id)
+    if rec is None:
+        raise HTTPException(404, f"no trace for thread {thread_id}")
+    return rec
+
+_FIX = pathlib.Path(__file__).parent.parent / "evals" / "fixtures"
+
+@app.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
+def dashboard():                                         # D-044: per-layer observability dashboard
+    return (pathlib.Path(__file__).parent / "dashboard.html").read_text()
+
+@app.get("/fixtures/runs")
+def fixture_runs():                                      # captured 5-scenario spans (offline demo data)
+    f = _FIX / "telemetry_runs.json"
+    if not f.exists(): raise HTTPException(404, "no captured runs — run scripts/capture_runs.py")
+    return json.loads(f.read_text())
+
+@app.get("/fixtures/mcp")
+def fixture_mcp():                                       # measured MCP-vs-graph result
+    f = _FIX / "mcp_vs_graph.json"
+    if not f.exists(): raise HTTPException(404, "no bench — run scripts/bench_mcp_vs_graph.py")
+    return json.loads(f.read_text())
 
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")
