@@ -1,8 +1,9 @@
-.PHONY: setup check evals gate run demo deploy preflight hf smoke bakeoff harness audit problem mcp
+.PHONY: setup check evals evals-braintrust gate run demo deploy preflight hf smoke bakeoff harness audit problem mcp
 setup:     ; pip install -r requirements.txt && cp -n .env.example .env || true
 demo:      ; bash demo.sh
 check:     ; python update.py --check
-evals:     ; python -m evals.run_evals
+evals:     ; python -m evals.runner                 # harness C: invariant gate + quality thresholds (offline)
+evals-braintrust: ; python -m evals.run_evals       # legacy row-per-run golden set → Braintrust
 gate:      ; python -m evals.gate $(EXP) $(BASE)
 run:       ; uvicorn api.main:app --reload --port 8080
 deploy:    ; cd deploy && sam build && sam deploy --guided
