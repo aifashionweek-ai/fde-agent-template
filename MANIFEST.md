@@ -2,6 +2,8 @@
 Rule: every directive lands as a D-### row here + MASTERSCHEMA rows + a catch-proven guard (tests/) in the same session.
 A directive that exists only in a chat, a doc, or a slide is a defect. `python update.py --check` refuses to pass with an open row.
 
+> Note: presentation/demo surfaces (`GET /hub` `/business` `/problem` `/audit`) are NOT control D-rows — they are static, read-only artifacts. See `docs/PRESENTATION.md`.
+
 | ID    | Directive                                                                 | Guard (test)                                              | Status |
 |-------|---------------------------------------------------------------------------|-----------------------------------------------------------|--------|
 | D-001 | Agent must terminate: max_steps enforced via recursion_limit              | tests/test_guards.py::test_max_steps                      | ✅ |
