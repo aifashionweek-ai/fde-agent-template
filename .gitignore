@@ -9,3 +9,7 @@ evals/results/
 # private engineering canon — mirrored in ~/Code/interview-notes (private repo); never publish here
 jaswant-manifest.md
 append_lesson.py
+
+# eval harness C: generated reports (keep one committed sample)
+evals/report/*
+!evals/report/sample.json

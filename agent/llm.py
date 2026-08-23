@@ -9,4 +9,5 @@ def get_llm(temperature: float = 0.0, task_class: str = "reasoning"):
         prof = next(x for x in REGISTRY.values() if x.provider == p)
     else:
         prof = select_model(task_class=task_class)  # honours MODEL_PROFILE / DATA_RESIDENCY env
-    return prof.build(temperature=temperature)
+    from .telemetry import RecordingLLM
+    return RecordingLLM(prof.build(temperature=temperature))  # D-044: capture real token usage; transparent proxy

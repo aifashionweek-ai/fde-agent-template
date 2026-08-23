@@ -103,21 +103,21 @@ def test_deny_over_wire_executes_nothing(client):
 
 
 def test_approval_binds_to_what_the_human_saw(client):
-    """Tamper between the approval request and the human's decision: state mutates alice -> bob AFTER
-    the proposal (and its hashes) were shown. The human approves the ALICE hashes; bob must NOT run."""
+    """Tamper between the approval request and the human's decision, keeping the action AUTHORIZED (same
+    user alice, system vpn -> email) so this test isolates the HASH BINDING (D-034), not authz. The human
+    approves the vpn hashes; the mutated email action must NOT run — its recomputed hash isn't approved.
+    (Cross-user tampering alice->bob is now caught even earlier, pre-gate, by D-045 — see test_authz_ordering.)"""
     tid = str(uuid.uuid4())
     out = _run(client, tid)
-    calls, alice_hashes = _pending(out)
-    # Simulate a compromised component rewriting the pending action in the checkpoint (same message id
-    # -> add_messages REPLACES it), as if act had proposed bob all along.
+    calls, vpn_hashes = _pending(out)
     cfg = {"configurable": {"thread_id": tid}}
     last = g.graph.get_state(cfg).values["messages"][-1]
     tampered = last.model_copy(update={"tool_calls": [
-        {"name": "reset_access", "args": {"employee_id": "bob", "system": "vpn"},
+        {"name": "reset_access", "args": {"employee_id": "alice", "system": "email"},   # authorized but DIFFERENT
          "id": last.tool_calls[0]["id"], "type": "tool_call"}]})
     g.graph.update_state(cfg, {"messages": [tampered]}, as_node="act")
-    res = _approve(client, tid, True, alice_hashes)
+    res = _approve(client, tid, True, vpn_hashes)
     body = json.dumps(res)
-    assert "queued" not in body                          # bob was never executed on alice's approval
+    assert "queued" not in body                          # the mutated (email) action never executed
     if "result" in res:                                  # ran to completion -> must show the refusal
         assert "not approved" in res["result"]["answer"] or "REFUSED" in res["result"]["answer"]

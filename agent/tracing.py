@@ -19,11 +19,30 @@ def tag_run(**md) -> dict:
     return {"metadata": md, "tags": [f"tenant:{md.get('tenant','?')}", f"model:{md['model_profile']}"]}
 
 def node_span(name: str):
-    """Append node name to state.path; LangSmith already spans each node, this makes the path part of the OUTPUT."""
+    """Append node name to state.path; LangSmith already spans each node, this makes the path part of the
+    OUTPUT. It is ALSO the single wiring point for the per-layer telemetry recorder (D-044): open a span
+    before the node, close it after — token usage lands in it live via RecordingLLM, tool/hash/status
+    detail is read from state+output afterward. Telemetry only OBSERVES; it never changes control flow,
+    and any telemetry error is swallowed so instrumentation can never break a run."""
+    from . import telemetry
     def deco(fn):
         @functools.wraps(fn)
         def w(s, *a, **k):
-            out = fn(s, *a, **k) or {}
+            thread_id = s.get("run_id", "default")
+            try:
+                sp = telemetry.open_span(name, thread_id, s)
+            except Exception:
+                sp = None
+            try:
+                out = fn(s, *a, **k) or {}
+            except BaseException as e:                    # incl. GraphInterrupt (the GATED path)
+                if sp is not None:
+                    try: telemetry.close_span(sp, name, s, None, e)
+                    except Exception: pass
+                raise
+            if sp is not None:
+                try: telemetry.close_span(sp, name, s, out, None)
+                except Exception: pass
             out.setdefault("path", s.get("path", []) + [name])
             return out
         return w

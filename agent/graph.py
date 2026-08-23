@@ -70,10 +70,34 @@ def _principal_ids(s):
     p = s.get("principal") or {}
     return p.get("user_id", "anon"), p.get("tenant_id", "demo"), s.get("run_id", "default")
 
+def _authz_resource(name: str, args: dict) -> dict:
+    """Map a side-effect tool call to the resource authorize() checks (D-045). Only reset_access carries a
+    subject rule; other actions carry just the tenant. One place, so the pre-gate check and the in-tool
+    check agree."""
+    if name == "reset_access":
+        return {"subject": (args or {}).get("employee_id")}
+    return {}
+
 @node_span("approval")
-def approval(s: AgentState):                            # D-004 human-in-the-loop + D-034 approval integrity
+def approval(s: AgentState):                            # D-004 HITL + D-034 approval integrity + D-045 authz-before-gate
     last = s["messages"][-1]
     uid, tenant, run_id = _principal_ids(s)
+    # D-045: AUTHORIZE BEFORE THE GATE. A human must never be shown a proposal for an action that was never
+    # authorizable. Deny unauthorizable calls here, pre-interrupt; the in-tool authorize() (tools.py) stays
+    # as defense-in-depth. Conservative batch policy: if any call in the proposal is unauthorized, the whole
+    # proposal is rejected pre-gate (real proposals are single-call).
+    from .authz import authorize
+    from .identity import principal_from_claims
+    principal = principal_from_claims(s.get("principal") or {})
+    authz = [(tc, authorize(principal, tc["name"], {"tenant": tenant, **_authz_resource(tc["name"], tc.get("args", {}))}))
+             for tc in last.tool_calls if tool_needs_approval(tc["name"])]
+    if any(not d.allow for _, d in authz):
+        deny = {tc["id"]: d for tc, d in authz}
+        return {"needs_approval": False, "messages": [
+            ToolMessage(content=json.dumps({"status": "DENIED", "tool": tc["name"],
+                "reason": (deny[tc["id"]].reason if tc["id"] in deny and not deny[tc["id"]].allow
+                           else "withheld: proposal contains an unauthorized action")}),
+                tool_call_id=tc["id"]) for tc in last.tool_calls]}
     # bind approval to the EXACT proposed actions (their proposal hashes), not just "yes to something"
     hashes = approve_calls(last.tool_calls, uid, tenant, run_id, tool_needs_approval)
     approved = list(set(s.get("approved", [])) | hashes)
@@ -117,6 +141,7 @@ def route_after_approval(s):
     last = s["messages"][-1]
     return "tools" if getattr(last, "tool_calls", None) else "act"
 
+@node_span("tools")                                       # D-044: telemetry span (path label set below is preserved)
 def traced_tools(s: AgentState):
     """Wrap ToolNode so tool names land in the trace path (D-013) AND enforce approval integrity +
     idempotency (D-034): a side-effect call executes only if its proposal hash was approved and hasn't run
@@ -168,5 +193,17 @@ def run(task: str, thread_id: str = "default", tenant: str | None = None) -> dic
     # sees the stale result and short-circuits guard_input -> finalize, replaying the old answer (D-038).
     out = graph.invoke({"task": task, "path": [], "run_id": thread_id, "result": None}, config=cfg)
     res = out.get("result")
-    if res: res = {**res, "trace": {"path": out.get("path", []), "steps": out.get("step_count"), "tool_calls": out.get("tool_calls")}}
+    if res: res = {**res, "trace": _trace(out, thread_id)}
     return res or {"status": "interrupted", "state": out.get("__interrupt__"), "path": out.get("path", [])}
+
+def _trace(out: dict, thread_id: str) -> dict:
+    """Assemble the trace block: node path + step/tool counts, plus the D-044 per-layer spans and run
+    totals (real tokens/latency/cost) from the telemetry recorder if present."""
+    t = {"path": out.get("path", []), "steps": out.get("step_count"), "tool_calls": out.get("tool_calls")}
+    try:
+        from . import telemetry
+        rec = telemetry.last_run(thread_id)
+        if rec: t["spans"] = rec["spans"]; t["totals"] = rec["totals"]
+    except Exception:
+        pass
+    return t

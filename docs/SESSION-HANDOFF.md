@@ -69,7 +69,10 @@ is open (tenant + sensitivity still apply).
 
 ## 3. Test state
 
-- **153 passing, 0 warnings** (full local run). Recent adds: D-037 ACL-parity, D-038 HITL-wire,
+- **169 passing, 0 warnings** (full local run). NOTE: D-044 observability, D-045 authz-before-gate, and
+  D-046 eval harness C live on branch `feat/observability-evals` (off tag `freeze-pre-observability`),
+  not yet merged to main — main is at 153. `make evals` runs the offline invariant+quality gate.
+  Recent adds: D-037 ACL-parity, D-038 HITL-wire,
   D-039 chat UI, D-040 A2A, D-041 multi-turn/errors (turn-2 system-prompt-persist 500 → bound at the model
   call), **D-042 identity normalization** (self-approval deny-bypass via case/whitespace/homoglyph — real
   control bypass, fixed), **D-043 indirect-injection-through-retrieval** (poisoned doc obeyed by a swayed
@@ -81,8 +84,8 @@ is open (tenant + sensitivity still apply).
     `importorskip` `unstructured`; proves a clean clone works + optional deps degrade gracefully).
   - `check-full` — `+ requirements-ingest.txt` + poppler, `OMP_NUM_THREADS=1` → **122 passed** (ingestion
     tests actually execute the real Unstructured parser).
-- **43 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
-  D-032…D-043, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
+- **46 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
+  D-032…D-046, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
   `D-0xx` is the intentional problem-specific slot (open). Every other row has a catch-proven guard.
 
 ---
