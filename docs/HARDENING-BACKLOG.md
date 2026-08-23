@@ -24,6 +24,7 @@ compliance gap a regulated deployment needs · **S3** = hardening / hygiene. Eff
 
 **Fixed this pass:**
 - **D-042** — `authorize()` normalizes identities (NFKC + strip + casefold) before compare. A raw compare let a caller self-approve a privileged escalation by writing the `requester` id with a trailing space / different case / full-width homoglyph. `tests/test_authz.py::test_self_approval_bypass_via_identity_variants_is_denied`
+- **D-045** — authorization now runs BEFORE the human approval gate (not just inside execution). Previously a cross-user reset was shown to a human and only denied post-approval at `tools.py`; now the approval node denies unauthorizable proposals pre-interrupt, so a human is never asked to approve an action that was never allowable. In-tool authz stays as defense-in-depth. `tests/test_authz_ordering.py::test_cross_user_never_reaches_the_approval_gate`
 
 **Bucketed gaps:**
 | Gap | Sev/Eff | Production control that closes it | Why deferred |

@@ -47,6 +47,19 @@ def _capture(client, tid):
     return client.get(f"/trace/{tid}").json()
 
 
+def _derive_outcome(trace, note):
+    """Outcome label derived from the SPANS (what the code did), not guessed — so the demo can't diverge."""
+    gate = [s["status"] for s in trace["spans"] if s["layer"] == "approval_gate"]
+    tools = [t["status"] for s in trace["spans"] if s.get("tools")
+             for t in s["tools"] if t["name"] == "reset_access"]
+    if "queued" in (note or ""): return "executed"
+    if "REFUSED" in tools: return "refused (hash binding)"
+    if "SWAYED" in gate: return "swayed→denied pre-gate"
+    if "DENIED" in gate: return "denied pre-gate (authz)"
+    if any(t == "DENIED" for t in tools): return "denied at execute"
+    return "answered (no side effect)"
+
+
 def run_all():
     client = TestClient(app)
     _seed_meridian()
@@ -58,11 +71,11 @@ def run_all():
         outcome, note = out.get("status", "answered"), ""
         if out.get("status") in ("interrupted", "pending_approval"):
             hashes = out["state"][0]["value"]["proposal_hashes"]
-            if mutate:                                    # tamper the pending action after it was shown
-                cfg = {"configurable": {"thread_id": tid}}
-                last = g.graph.get_state(cfg).values["messages"][-1]
-                tampered = last.model_copy(update={"tool_calls": [
-                    {**last.tool_calls[0], "args": {"employee_id": "bob", "system": "vpn"}}]})
+            if mutate:                                    # tamper the pending action after it was shown —
+                cfg = {"configurable": {"thread_id": tid}}  # keep it AUTHORIZED (alice) but change the system,
+                last = g.graph.get_state(cfg).values["messages"][-1]  # so the HASH BINDING (D-034) is the control
+                tampered = last.model_copy(update={"tool_calls": [   # under test, not authz (that's cross_user/D-045)
+                    {**last.tool_calls[0], "args": {"employee_id": "alice", "system": "email"}}]})
                 g.graph.update_state(cfg, {"messages": [tampered]}, as_node="act")
             if approve is not None:
                 res = client.post("/approve", json={"thread_id": tid, "approve": approve, "hashes": hashes}).json()
@@ -72,6 +85,7 @@ def run_all():
         else:
             note = (out.get("result") or {}).get("answer", "")[:160]
         trace = _capture(client, tid)
+        outcome = _derive_outcome(trace, note)            # label from what the spans actually show
         runs[key] = {"label": label, "task": task, "outcome": outcome, "note": note, "trace": trace}
         t = trace["totals"]
         print(f"  {label:22} outcome={outcome:16} tokens={t['tokens']:>5} ms={t['latency_ms']:>7} "

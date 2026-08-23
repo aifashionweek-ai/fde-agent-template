@@ -133,7 +133,7 @@ def close_span(sp: Span, node_name: str, state: dict, out: dict | None, error: B
             sp.tools = _tool_records(state, out)
             sp.status = _tools_status(sp.tools, run0)
         else:
-            sp.status = _status_for(node_name, state, out, sp)
+            sp.status = _status_for(node_name, state, out, run0)
     run = _ACTIVE.get()
     if run and run.stack:
         run.stack.pop()
@@ -159,17 +159,26 @@ def _gate_hashes(state: dict) -> list[str]:
         return []
 
 
-def _status_for(node_name: str, state: dict, out: dict | None, sp: Span) -> str:
+def _had_retrieval(run: RunTrace | None) -> bool:
+    return bool(run) and any(t.name in {"search_policy", "recall_memory", "lookup_employee"}
+                             for s in run.spans for t in s.tools)
+
+
+def _status_for(node_name: str, state: dict, out: dict | None, run: RunTrace | None = None) -> str:
     out = out or {}
     if node_name == "guard_input":
         res = out.get("result") or {}
         return "DENIED" if str(res.get("answer", "")).startswith("Refused") else "PASS"
     if node_name == "approval":
-        # GATED is the interrupt (error) path (set in close_span). A NORMAL return here means the human
-        # decision already resolved (resume) or auto-approve: denied-by-human -> DENIED, else PASS.
+        # GATED is the interrupt (error) path (set in close_span). A NORMAL return here means either the
+        # human decision resolved (resume/auto), OR a D-045 pre-gate authz denial (the human was never
+        # shown the proposal). Denied-pre-gate after untrusted retrieval is SWAYED (the D-043 signature).
         for m in out.get("messages", []) or []:
-            if "Denied by human" in getattr(m, "content", ""):
+            c = getattr(m, "content", "")
+            if "Denied by human" in c:
                 return "DENIED"
+            if '"status": "DENIED"' in c:                # pre-gate authz denial
+                return "SWAYED" if _had_retrieval(run) else "DENIED"
         return "PASS"
     return "PASS"
 
@@ -182,10 +191,7 @@ def _tools_status(recs: list[ToolRecord], run: RunTrace | None) -> str:
     blocked = [r for r in recs if r.status in ("DENIED", "REFUSED")]
     if not blocked:
         return "PASS"
-    prior_retrieval = bool(run) and any(
-        t.name in {"search_policy", "recall_memory", "lookup_employee"}
-        for s in run.spans for t in s.tools)
-    if prior_retrieval:
+    if _had_retrieval(run):
         return "SWAYED"
     return "REFUSED" if any(r.status == "REFUSED" for r in blocked) else "DENIED"
 

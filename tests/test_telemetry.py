@@ -130,12 +130,19 @@ def test_captured_fixtures_are_wellformed_and_show_the_controls():
 
     def tools(run):
         return [t for s in run["trace"]["spans"] if s.get("tools") for t in s["tools"]]
-    cross = [t for t in tools(runs["cross_user"]) if t["name"] == "reset_access"][0]
-    assert cross["status"] == "DENIED" and cross["hash_match"] is True      # executed, authz denied inside
-    inj_span = [s for s in runs["injection"]["trace"]["spans"] if s["layer"] == "tools" and s["status"] == "SWAYED"]
-    assert inj_span, "injection run should have a SWAYED tools span"
+    def gate(run):
+        return [s["status"] for s in run["trace"]["spans"] if s["layer"] == "approval_gate"]
+    # self-reset executed with a matching hash
+    sr = [t for t in tools(runs["self_reset"]) if t["name"] == "reset_access"][0]
+    assert sr["status"] == "PASS" and sr["hash_match"] is True
+    # cross-user is denied PRE-GATE (D-045): the gate span is DENIED and no reset ever executed
+    assert "DENIED" in gate(runs["cross_user"])
+    assert not [t for t in tools(runs["cross_user"]) if t["name"] == "reset_access"]
+    # injection: swayed model proposed a cross-user reset -> denied pre-gate, gate span SWAYED (D-043+D-045)
+    assert "SWAYED" in gate(runs["injection"])
+    # mutate: authorized-but-different action -> hash binding REFUSES it at execute (D-034)
     mut = [t for t in tools(runs["mutate"]) if t["name"] == "reset_access"][0]
-    assert mut["status"] == "REFUSED" and mut.get("hash_match") in (None, False)  # never executed (key omitted when None)
+    assert mut["status"] == "REFUSED" and mut.get("hash_match") in (None, False)
 
 
 def test_telemetry_failure_never_breaks_a_run(monkeypatch):
