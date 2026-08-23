@@ -69,11 +69,11 @@ is open (tenant + sensitivity still apply).
 
 ## 3. Test state
 
-- **144 passing, 0 warnings** (full local run; 122 + D-037 ACL-parity (3) + D-038 HITL-wire (4) +
-  D-039 chat UI (3) + D-040 A2A (4) + directory (3 — smoke-found P0: `agent/directory.py` didn't exist,
-  `lookup_employee` 500'd the first real /run) + D-041 multi-turn/errors (5 — live-found P0: turn 2 on a
-  thread 500'd because the system prompt was PERSISTED per turn; now bound at the model call, exactly one
-  system message per act call; pending approval blocks new input; no bare plain-text 500s anywhere).
+- **153 passing, 0 warnings** (full local run). Recent adds: D-037 ACL-parity, D-038 HITL-wire,
+  D-039 chat UI, D-040 A2A, D-041 multi-turn/errors (turn-2 system-prompt-persist 500 → bound at the model
+  call), **D-042 identity normalization** (self-approval deny-bypass via case/whitespace/homoglyph — real
+  control bypass, fixed), **D-043 indirect-injection-through-retrieval** (poisoned doc obeyed by a swayed
+  model, gate+authz still hold — the flagship proof). Red-team posture in `docs/HARDENING-BACKLOG.md`.
   `python update.py --check` is the gate: regenerates
   `agent/tool_registry.json` from `MASTERSCHEMA.md`, drift-checks, runs pytest.
 - **CI: two jobs, both green on `7254df3`** (`.github/workflows/check.yml`):
@@ -81,8 +81,8 @@ is open (tenant + sensitivity still apply).
     `importorskip` `unstructured`; proves a clean clone works + optional deps degrade gracefully).
   - `check-full` — `+ requirements-ingest.txt` + poppler, `OMP_NUM_THREADS=1` → **122 passed** (ingestion
     tests actually execute the real Unstructured parser).
-- **41 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
-  D-032…D-041, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
+- **43 MANIFEST rows.** ⚠️ Numbering has a gap: **D-031 does not exist** — the rows are **D-001…D-030,
+  D-032…D-043, D-0xx**. Harmless (`update.py` doesn't require contiguity), but don't hunt for D-031.
   `D-0xx` is the intentional problem-specific slot (open). Every other row has a catch-proven guard.
 
 ---
