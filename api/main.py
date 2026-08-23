@@ -92,6 +92,26 @@ def fixture_mcp():                                       # measured MCP-vs-graph
     if not f.exists(): raise HTTPException(404, "no bench — run scripts/bench_mcp_vs_graph.py")
     return json.loads(f.read_text())
 
+# ---- Presentation surfaces (docs/PRESENTATION.md) — static file responses, NO logic, read-only ----
+_REPO = pathlib.Path(__file__).parent.parent
+
+def _serve_html(path: pathlib.Path):
+    if not path.exists():
+        raise HTTPException(404, f"not found: {path.name} (generate/drop it in first)")
+    return HTMLResponse(path.read_text())
+
+@app.get("/hub", response_class=HTMLResponse, include_in_schema=False)
+def hub(): return _serve_html(_REPO / "presentation" / "index-hub.html")           # demo home base
+
+@app.get("/business", response_class=HTMLResponse, include_in_schema=False)
+def business(): return _serve_html(_REPO / "presentation" / "business-analytics.html")   # scoping brief
+
+@app.get("/problem", response_class=HTMLResponse, include_in_schema=False)
+def problem(): return _serve_html(_REPO / "evals" / "results" / "PROBLEM.html")    # make problem
+
+@app.get("/audit", response_class=HTMLResponse, include_in_schema=False)
+def audit(): return _serve_html(_REPO / "evals" / "results" / "AUDIT.html")        # make audit
+
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")
 def contract(): return AgentOutput.model_json_schema()

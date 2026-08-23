@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business analytics — scoping brief</title>
+<style>
+  :root { --ink:#1a1a2e; --mut:#6b7280; --line:#e5e7eb; --accent:#4338ca; --bg:#fafafa;
+          --good:#166534; --good-bg:#f0fdf4; --warn:#b45309; --warn-bg:#fffbeb; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.6 -apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); }
+  main { max-width:820px; margin:0 auto; padding:28px 18px 80px; }
+  a.back { color:var(--accent); text-decoration:none; font-size:13px; }
+  h1 { font-size:22px; margin:6px 0 2px; } .sub { color:var(--mut); margin-bottom:22px; }
+  h2 { font-size:15px; margin:26px 0 8px; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:12px 0; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .k { font-weight:700; } ul { margin:6px 0 0; padding-left:20px; } li { margin:3px 0; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; font-size:14px; }
+  th { text-align:left; color:var(--mut); border-bottom:1px solid var(--line); padding:6px 8px; }
+  td { padding:6px 8px; border-bottom:1px solid #f3f4f6; vertical-align:top; }
+  .good { color:var(--good); } .must-not { color:#991b1b; }
+  .pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
+  .pill.good { background:var(--good-bg); } .pill.warn { background:var(--warn-bg); color:var(--warn); }
+  .ph { background:var(--warn-bg); border:1px solid #fcd34d; color:var(--warn); border-radius:10px;
+        padding:10px 14px; font-size:13px; margin-bottom:18px; }
+  @media (max-width:640px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/hub">← back to hub</a>
+  <h1>Business analytics — scoping brief</h1>
+  <div class="sub">Enterprise IT-Ops &amp; Employee Support agent · surface ask → real problem → where AI fits.</div>
+
+  <div class="ph">PLACEHOLDER scaffold (public-safe, generic procurement framing). Replace with the
+    handed-in <code>presentation/business-analytics.html</code>; the <code>/business</code> route serves
+    whatever is at that path.</div>
+
+  <h2>Surface ask vs. real problem</h2>
+  <div class="grid">
+    <div class="card"><span class="k">The surface ask</span>
+      <p>"Give employees a chatbot for IT/HR questions so the helpdesk queue shrinks."</p></div>
+    <div class="card"><span class="k">The real problem</span>
+      <p>The queue is expensive because answering requires <em>acting</em> — resetting access, filing
+      tickets, provisioning — and every action carries blast radius, tenant/clearance boundaries, and an
+      audit obligation. A read-only bot deflects the easy half and leaves the costly half untouched.</p></div>
+  </div>
+
+  <h2>Where AI fits — and where it must not</h2>
+  <table>
+    <thead><tr><th>Capability</th><th>AI role</th><th>Boundary</th></tr></thead>
+    <tbody>
+      <tr><td>Answer from runbooks/policy</td><td class="good">Lead — routed, cited RAG</td><td>tenant + clearance filtered before ranking; cite only retrieved ids</td></tr>
+      <tr><td>Propose a remediation</td><td class="good">Lead — plan → act</td><td>allowlisted tools; bounded loop</td></tr>
+      <tr><td>Authorize an action</td><td class="must-not">Never the model</td><td>deterministic <code>authorize()</code>, before the human gate</td></tr>
+      <tr><td>Execute a side effect</td><td class="must-not">Never un-approved</td><td>human-in-the-loop; approval bound to a proposal hash</td></tr>
+      <tr><td>Decide what's true</td><td class="must-not">Not from retrieved text</td><td>retrieved content is data, never instructions</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Success criteria (what "it works" means)</h2>
+  <ul>
+    <li><span class="k">Safe to leave running:</span> every safety property is a tested invariant; the deploy blocks if one regresses.</li>
+    <li><span class="k">Deflection with action:</span> resolves the acting half under human approval, not just the answering half.</li>
+    <li><span class="k">Provable:</span> every run is traced with its node path, tokens, and control status; approvals are auditable.</li>
+    <li><span class="k">Portable:</span> a new domain is four slots (golden set → corpus → tools → output contract); governance unchanged.</li>
+  </ul>
+
+  <h2>Build-first (impact ÷ effort)</h2>
+  <div class="card">
+    <span class="pill good">FIRST</span> the control plane — authz, tenant isolation, approval binding, injection-inert retrieval.
+    <span class="pill warn">THEN</span> quality — retrieval recall, groundedness, model selection.
+    <p class="sub" style="margin-top:8px">Rationale: the differentiator isn't answering (everyone ships that) — it's being
+    <em>bounded</em> and <em>continuously proven</em>. See the <a href="/problem">problem breakdown</a> and
+    <a href="/audit">multilayer audit</a> for the computed version of this ranking.</p>
+  </div>
+</main>
+</body>
+</html>
