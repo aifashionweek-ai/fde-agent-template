@@ -52,6 +52,35 @@ def test_run_interrupts_with_proposal_and_hashes(client):
     assert len(hashes) == 1 and all(len(h) == 64 for h in hashes)   # sha256 hex — the binding artifact
 
 
+def test_forged_hashes_on_approve_execute_nothing(client):
+    """D-042: a client that sends MADE-UP hashes (not a mutation of the real proposal — pure fabrication)
+    approves nothing. Execution recomputes the real hash from the actual pending args; a forged hash is
+    never in the recomputed set, so the side effect is REFUSED. Distinct from the tamper case."""
+    tid = str(uuid.uuid4())
+    _pending(_run(client, tid))                          # a real proposal is pending
+    forged = ["deadbeef" * 8, "0" * 64]                  # plausible-shaped sha256 hex, but fabricated
+    res = _approve(client, tid, True, forged)["result"]
+    assert "queued" not in res["answer"]                 # reset_access never ran
+    assert "not approved" in res["answer"] or "REFUSED" in res["answer"]
+
+
+def test_caller_cannot_inject_a_privileged_principal(client):
+    """D-042 confused-deputy: the principal is built SERVER-SIDE from the trusted env/gateway, never from
+    the request body. Extra fields (roles/principal/user_id) in the /run payload are ignored — a caller
+    (human or another agent) cannot elevate itself by decorating the request. Proven by inspecting the
+    principal that actually landed in graph state, not the (stubbed) tool args."""
+    tid = str(uuid.uuid4())
+    r = client.post("/run", json={"task": "reset access", "thread_id": tid,
+                                  "user_id": "root", "roles": ["it_admin"],
+                                  "principal": {"user_id": "root", "roles": ["it_admin"]}})
+    assert r.status_code == 200, r.text
+    state = g.graph.get_state({"configurable": {"thread_id": tid}}).values
+    principal = state["principal"]
+    assert principal["user_id"] == "alice"               # from env, NOT the injected 'root'
+    assert "it_admin" not in principal["roles"]          # injected admin role did not land
+    assert principal["tenant_id"] == "meridian"
+
+
 def test_approve_executes_exactly_once_then_replay_skips(client):
     tid = str(uuid.uuid4())
     _, hashes = _pending(_run(client, tid))

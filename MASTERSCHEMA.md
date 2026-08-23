@@ -71,6 +71,7 @@ Selection order (D-009): hard constraints (residency, cost ≤, quality ≥, tas
 |-------|------|-------|
 | Principal | user_id, tenant_id, roles, groups | parsed from verified OIDC/JWT claims upstream; into AgentState (D-033) |
 | authorize(principal, action, resource) | DETERMINISTIC allow/deny — never the LLM | tenant isolation · self-only reset (unless admin) · no self-approval of privileged · retrieve ≤ clearance ∧ group ACL |
+| identity comparison (D-042) | NFKC + strip + casefold before compare (`_norm`) | case/whitespace/compat-homoglyph variants can't slip a deny; cross-script confusables (Cyrillic) are a documented residual (HARDENING-BACKLOG) |
 | enforcement | tools call authorize() before acting; retrieval filters by `groups` | trust boundary: gateway authenticates, this layer enforces per-principal |
 
 ## Approval integrity (agent/approval.py) — D-034

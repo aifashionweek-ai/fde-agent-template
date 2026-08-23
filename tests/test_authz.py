@@ -67,6 +67,31 @@ def test_principal_from_claims_maps_oidc_keys():
     assert p.user_id == "u1" and p.tenant_id == "aristo" and "approver" in p.roles and "ops" in p.groups
 
 
+def test_self_approval_bypass_via_identity_variants_is_denied():
+    """D-042: the self-approval-of-privileged deny must survive identity spoofing of `requester`.
+    A raw string compare let alice self-approve by writing her own name with a trailing space,
+    different case, or a full-width homoglyph — normalize (NFKC + casefold + strip) before compare."""
+    appr = Principal("alice", "meridian", roles=("approver",))
+    for requester in ["alice ", " alice", "ALICE", "Alice", "ａlice"]:   # trailing/leading space, case, full-width 'a'
+        d = authorize(appr, "approve", {"privileged": True, "requester": requester})
+        assert not d.allow, f"self-approval NOT denied for requester={requester!r}"
+        assert "self-approval" in d.reason
+
+
+def test_reset_self_only_survives_identity_variants():
+    """The mirror: reset self-only must not be evadable by casing/whitespace either direction."""
+    alice = Principal("alice", "meridian")
+    assert authorize(alice, "reset_access", {"tenant": "meridian", "subject": "ALICE"}).allow   # still self
+    assert authorize(alice, "reset_access", {"tenant": "meridian", "subject": " alice "}).allow
+    assert not authorize(alice, "reset_access", {"tenant": "meridian", "subject": "bob"}).allow  # still not self
+
+
+def test_tenant_isolation_survives_case_and_whitespace():
+    alice = Principal("alice", "meridian")
+    assert not authorize(alice, "reset_access", {"tenant": "aristo", "subject": "alice"}).allow
+    assert authorize(alice, "reset_access", {"tenant": "MERIDIAN", "subject": "alice"}).allow    # same tenant, cased
+
+
 def test_reset_access_tool_enforces_authz(monkeypatch):
     from agent.tools import reset_access
     monkeypatch.setenv("USER_ID", "alice"); monkeypatch.setenv("TENANT", "meridian")

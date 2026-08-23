@@ -12,10 +12,24 @@ Every rule is data-driven and testable in isolation (tests/test_authz.py). Remov
 deny-test fail — that's the catch-proof.
 """
 from __future__ import annotations
+import unicodedata
 from dataclasses import dataclass
 
 from .identity import Principal
 from .retrieval import SENSITIVITY
+
+
+def _norm(s) -> str:
+    """Canonical form for an IDENTITY comparison (D-042). Raw string equality let an attacker evade a
+    deny by writing an id with a trailing space, different case, or a compatibility homoglyph
+    (e.g. full-width 'ａlice'). NFKC folds compatibility/width variants, strip drops surrounding
+    whitespace, casefold makes it case-insensitive. NOTE: NFKC does NOT map cross-SCRIPT confusables
+    (Cyrillic 'а' U+0430 stays distinct) — that needs a TR39 confusables skeleton (see HARDENING-BACKLOG)."""
+    return unicodedata.normalize("NFKC", str(s)).strip().casefold()
+
+
+def _same(a, b) -> bool:
+    return _norm(a) == _norm(b)
 
 ADMIN_ROLES = {"it_admin", "helpdesk_admin"}
 APPROVER_ROLES = {"approver", "manager", "it_admin"}
@@ -45,20 +59,21 @@ def clearance(p: Principal) -> str:
 def authorize(principal: Principal, action: str, resource: dict | None = None) -> Decision:
     r = resource or {}
     # 1) tenant isolation — applies to any action naming a tenant; enforced BEFORE anything else.
+    # Identity comparisons are normalized (D-042) so case/whitespace/homoglyph variants can't slip a deny.
     rt = r.get("tenant")
-    if rt is not None and rt != principal.tenant_id:
+    if rt is not None and not _same(rt, principal.tenant_id):
         return _deny(f"cross-tenant denied: principal tenant={principal.tenant_id} != resource tenant={rt}")
 
     # 2) credential reset — self only, unless an admin role.
     if action == "reset_access":
         subject = r.get("subject")
-        if subject is not None and subject != principal.user_id and not _is_admin(principal):
+        if subject is not None and not _same(subject, principal.user_id) and not _is_admin(principal):
             return _deny(f"{principal.user_id} cannot reset credentials of {subject} (not self, not admin)")
-        return _allow("self credential reset" if subject == principal.user_id else "admin credential reset")
+        return _allow("self credential reset" if _same(subject, principal.user_id) else "admin credential reset")
 
     # 3) approval — no self-approval of a privileged escalation; must hold an approver role.
     if action == "approve":
-        if r.get("privileged") and r.get("requester") == principal.user_id:
+        if r.get("privileged") and _same(r.get("requester"), principal.user_id):
             return _deny("self-approval of a privileged escalation is forbidden")
         if not (APPROVER_ROLES & set(principal.roles) or _is_admin(principal)):
             return _deny(f"{principal.user_id} lacks an approver role")
