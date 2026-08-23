@@ -21,8 +21,17 @@ def test_business_served():
     assert "scoping brief" in r.text
 
 
-def test_missing_presentation_file_is_404_not_500():
-    """A route whose backing file is absent returns a clean 404, never a 500."""
-    # /audit serves a generated (possibly-absent) report; it must 404 gracefully, not crash.
-    r = client.get("/audit")
-    assert r.status_code in (200, 404)
+def test_all_six_stops_return_200():
+    """Every demo stop returns 200 — a missing generated report degrades to a placeholder, never a 404."""
+    for p in ["/", "/hub", "/business", "/dashboard", "/problem", "/audit"]:
+        assert client.get(p).status_code == 200, p
+
+
+def test_missing_backing_file_serves_placeholder_not_404():
+    """A route whose backing file is absent returns a clean 200 'run X' page, never a raw 404/500."""
+    import pathlib
+    from api.main import _serve_html
+    resp = _serve_html(pathlib.Path("/no/such/report.html"), hint="make audit")
+    assert resp.status_code == 200
+    body = bytes(resp.body).decode()
+    assert "hasn't been generated" in body and "make audit" in body

@@ -19,9 +19,11 @@ Start the server (`bash demo.sh`) and open **http://localhost:8000/hub**.
 
 ## Routes
 
-All read-only static-file responses in `api/main.py`; a missing backing file returns a clean 404, never
-a 500. `GET /problem` and `GET /audit` serve **generated** reports (`evals/results/` is gitignored) — run
-`make problem` / `make audit` first, or they 404.
+All read-only static-file responses in `api/main.py`. **A missing backing file never dead-ends in a 404**
+— it returns a clean **200 "not generated — run X"** placeholder so no demo stop breaks in front of an
+audience. `GET /problem` and `GET /audit` serve **generated** reports (`evals/results/` is gitignored);
+**`demo.sh` self-heals** — it regenerates `PROBLEM.html` + `AUDIT.html` on startup if missing, so a fresh
+clone serves the real reports with no extra step.
 
 ## Notes
 
