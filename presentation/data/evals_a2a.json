@@ -1,0 +1,28 @@
+{
+  "classification_note": "Agent->Agent cases are NOT in the layer datasets — they live in tests/test_a2a.py + scripts/a2a_demo.py. A calling agent uses the same HTTP contract (POST /run); a proposed side effect interrupts across the boundary and the caller's approval_channel decides. Governance is transport-independent (D-040).",
+  "source": "tests/test_a2a.py, agent/a2a.py, scripts/a2a_demo.py",
+  "principal": "USER_ID=alice, TENANT=meridian (demo.sh:22 exports these; a2a_demo runs a non-admin self-reset the authz layer allows)",
+  "scenarios": [
+    {"id": "a2a-1", "test": "tests/test_a2a.py::test_agent_initiated_side_effect_still_hits_the_gate",
+     "input": "reset alice vpn access", "what_propagates": "interrupt reaches the caller's channel with pending_tool_calls=[reset_access] + 1 proposal_hash",
+     "expected_gate_behavior": "channel consulted (len(seen)==1); denying channel -> side effect never fires, 'Denied by human'",
+     "channel": "recording deny (returns False)", "last_run": "pass"},
+    {"id": "a2a-2", "test": "tests/test_a2a.py::test_policy_channel_denies_privileged_action",
+     "input": "reset alice vpn access", "what_propagates": "interrupt -> policy channel evaluates the pending tool against an allowlist",
+     "expected_gate_behavior": "reset_access not in allow_tools={create_ticket} -> never executed",
+     "channel": "policy_channel(allow_tools={'create_ticket'})", "last_run": "pass"},
+    {"id": "a2a-3", "test": "tests/test_a2a.py::test_human_approval_releases_the_side_effect_once",
+     "input": "reset alice vpn access", "what_propagates": "interrupt -> granting channel echoes the seen hashes",
+     "expected_gate_behavior": "executes via the same governed path (queued), exactly once",
+     "channel": "lambda proposal: True", "last_run": "pass"},
+    {"id": "a2a-4", "test": "tests/test_a2a.py::test_caller_cannot_release_without_its_channel",
+     "input": "reset alice vpn access", "what_propagates": "interrupt -> channel abstains (returns None)",
+     "expected_gate_behavior": "abstain = deny (fail closed) -> never executed",
+     "channel": "lambda proposal: None (abstain)", "last_run": "pass"},
+    {"id": "a2a-live", "test": "scripts/a2a_demo.py (console_channel, live model)",
+     "input": "see settled prompt in EXTRACTION.md / a2a_prompt.json", "what_propagates": "interrupt -> console 'APPROVAL REQUIRED (agent-initiated)' with proposal_hash; y/n; EOF=deny (fail closed)",
+     "expected_gate_behavior": "GATES cleanly (reset_access(alice,vpn)) — confirmed live this session on current main; 'n' denies, 'y' queues once",
+     "channel": "console_channel (agent/a2a.py console_channel)", "last_run": "gated (confirmed headless)"}
+  ],
+  "counts": {"scripted_tests": 4, "live_demo": 1, "all_passing": true}
+}

@@ -1,0 +1,33 @@
+{
+  "generated_from": "agent/logging_setup.py, agent/tracing.py, agent/telemetry.py, api/main.py, evals/, agent/graph.py, agent/memory.py",
+  "streams": [
+    {"stream": "structured application logs", "destination": "stderr (structlog JSON if LOG_JSON=1, else console renderer; stdlib fallback if structlog absent)",
+     "where": "agent/logging_setup.py:16-19 (PrintLoggerFactory file=sys.stderr); emitters e.g. agent/models.py:38 model_build",
+     "durable": "no", "note": "process stderr; captured by the container/Lambda log driver in prod, not persisted by this app"},
+
+    {"stream": "per-layer telemetry spans (D-044)", "destination": "in-process LAST_RUNS dict → served at GET /trace/{thread_id}; captured offline to evals/fixtures/telemetry_runs.json",
+     "where": "agent/telemetry.py:38 (LAST_RUNS), telemetry.py:141 (persist per node), api/main.py:69 (/trace), scripts/capture_runs.py (fixtures)",
+     "durable": "no", "note": "in-memory per process; the committed fixtures file is the only on-disk copy"},
+
+    {"stream": "LangSmith trace", "destination": "LangSmith SaaS (opt-in via env)",
+     "where": "agent/tracing.py:7 (env), tracing.py:53 (Client), agent/graph.py tag_run()",
+     "durable": "no (for compliance)", "note": "observability/debugging + turning traces into eval rows; explicitly NOT an append-only retained compliance log (README 'Scale & limitations'; HARDENING-BACKLOG.md)"},
+
+    {"stream": "eval results (offline gate source of truth)", "destination": "evals/results/<exp>.json (committed) + evals/report/latest.json (harness C, gitignored except sample.json)",
+     "where": "evals/harness.py (writes results), evals/runner.py (report/), evals/run_evals.py:1",
+     "durable": "yes (committed json)", "note": "the gate reads these offline; also pushed to Braintrust best-effort"},
+
+    {"stream": "audit + problem reports (HTML)", "destination": "evals/results/AUDIT.html, evals/results/PROBLEM.html (gitignored; demo.sh self-heals)",
+     "where": "evals/audit_report.py:330, evals/problem_report.py:139-140; served at /audit,/problem (api/main.py)",
+     "durable": "regenerated", "note": "computed from live pytest + git each run; not a retained record"},
+
+    {"stream": "executed-hash ledger (idempotency, D-034)", "destination": "AgentState['executed'] in the LangGraph checkpoint (MemorySaver, in-memory)",
+     "where": "agent/graph.py:165 (executed set), agent/state.py:38, agent/graph.py:178 (MemorySaver)",
+     "durable": "no", "note": "in-process only; a real deployment needs Postgres/Dynamo checkpointer + a durable approval ledger (bucketed S2/M)"},
+
+    {"stream": "long-term memory", "destination": "JSON file (.local/memory.json by default, MEMORY_PATH env)",
+     "where": "agent/memory.py:48 (path), memory.py:52 (load)",
+     "durable": "yes (local file)", "note": "demo-scale JSON; production → Postgres/DynamoDB (docs/12)"}
+  ],
+  "honest_summary": "The only DURABLE, on-disk artifacts are committed eval-result JSON and the local memory file. Application logs go to stderr (ephemeral), telemetry spans + the executed-hash ledger are in-process, and LangSmith is observability — none is an append-only retained compliance log. That gap is tracked (HARDENING-BACKLOG.md, S2/M)."
+}
