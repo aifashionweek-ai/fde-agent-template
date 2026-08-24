@@ -55,8 +55,9 @@ def load_bakeoff():
     open-vs-closed finding). Committed evidence, always present; returns None if the doc/section is
     absent so the card can say so honestly (J-02 — never fabricate the finding). Only the deterministic
     section is read (bounded to the next '## '), so the judge table below it is never mixed in."""
-    doc = ROOT/"docs"/"model-eval-2026-08-19.md"
-    if not doc.exists(): return None
+    reps = sorted((ROOT/"docs").glob("model-eval-*.md"))     # newest report wins (gets the added GPT-4o column)
+    if not reps: return None
+    doc = reps[-1]
     lines = doc.read_text().splitlines()
     try: start = next(i for i, l in enumerate(lines) if l.strip().lower().startswith("## deterministic"))
     except StopIteration: return None
@@ -138,8 +139,8 @@ LAYERS = [
    alts="Read-only agent (no real work) · auto-execute actions (dangerous) · approve-everything (useless friction).",
    evidence_keys=["hitl_respected","tool_allowlist","within_budget"], manifest=["D-003","D-004","D-007"]),
  dict(id="L5", name="Model Selection (open vs closed)", icon="⚖️",
-   what="Constraint-driven registry: select_model(task, residency, cost, quality, license). Anthropic API + Bedrock (Claude closed; Qwen/Llama open, in-account) + HF. Fine-tune path via LoRA + Bedrock Custom Model Import.",
-   why="The governance layer bounds worst-case behavior INDEPENDENT of model choice — the deterministic controls run outside the model and hold across Claude/Qwen/Llama — so model selection is a pure quality/cost/residency decision, not a safety one. Separate 'can we use it' (residency/license/cost) from 'is it good' (our evals).",
+   what="Constraint-driven registry: select_model(task, residency, cost, quality, license). 4 providers — Anthropic API + Bedrock (Claude closed; Qwen/Llama open, in-account) + OpenAI (GPT-4o) + HF — across 2 US vendors (Anthropic, OpenAI) + open weights. One-interface swap (D-008); a provider with no key SKIPS cleanly, never a fake column. Fine-tune path via LoRA + Bedrock Custom Model Import.",
+   why="The governance layer bounds worst-case behavior INDEPENDENT of model choice — the deterministic controls run outside the model and hold across every model in the bake-off — so model selection is a pure quality/cost/residency decision, not a safety one. Separate 'can we use it' (residency/license/cost) from 'is it good' (our evals).",
    alts="One hardcoded model (no residency story) · always-open (quality risk on reasoning) · always-closed (cost, lock-in, no in-account option for regulated data).",
    evidence_keys=[], manifest=["D-008","D-009"], bakeoff=True),
  dict(id="L6", name="Tracing", icon="📡",

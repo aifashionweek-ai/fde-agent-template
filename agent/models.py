@@ -14,8 +14,14 @@ from dataclasses import dataclass, field
 from .logging_setup import log
 from typing import Literal, Optional
 
-Provider   = Literal["anthropic", "bedrock", "hf"]
+Provider   = Literal["anthropic", "bedrock", "hf", "openai"]
 Weights    = Literal["closed", "open"]
+
+
+class MissingCredentials(RuntimeError):
+    """A provider was selected but its API key isn't set. Raised (not returned) so a bare `build()` fails
+    loud, but callers that want to SKIP a model (the bake-off) can catch this specific type and skip
+    cleanly rather than crashing the whole run (J-04)."""
 Residency  = Literal["vendor_api", "customer_vpc", "self_hosted"]
 TaskClass  = Literal["reasoning", "extraction", "classification", "summarization", "codegen"]
 
@@ -57,6 +63,13 @@ class ModelProfile:
                                      repo_id=None if os.getenv("HF_ENDPOINT_URL") else self.model,
                                      temperature=max(temperature, 0.01), max_new_tokens=max_tokens)
             return ChatHuggingFace(llm=ep)
+        if self.provider == "openai":
+            # D-008: same one-interface swap. A missing key raises MissingCredentials (a clear one-line
+            # message, caught by the bake-off to SKIP cleanly) — never a raw traceback / silent 1.00.
+            if not os.getenv("OPENAI_API_KEY", "").strip():
+                raise MissingCredentials("OPENAI_API_KEY not set — export OPENAI_API_KEY=sk-... to run gpt-4o")
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(model=self.model, temperature=temperature, max_tokens=max_tokens)
         raise ValueError(self.provider)
 
 def _bedrock_guardrail() -> Optional[dict]:
@@ -107,7 +120,28 @@ REGISTRY: dict[str, ModelProfile] = {p.id: p for p in [
     ModelProfile("qwen2.5-7b-hf", "hf", "Qwen/Qwen2.5-7B-Instruct", "open", "self_hosted",
                  cost_tier=1, latency_tier=2, quality_tier=2, good_for=("classification","extraction","codegen"),
                  license="apache-2.0", notes="permissive license; strong small open model"),
+    # --- OpenAI (closed, vendor API). 4th provider / 2nd US vendor in the bake-off. LLM_PROVIDER=openai
+    #     or MODEL_PROFILE=gpt-4o-api selects it. quality_tier stays a placeholder until a real eval fills it. ---
+    ModelProfile("gpt-4o-api", "openai", os.getenv("OPENAI_MODEL", "gpt-4o"),
+                 "closed", "vendor_api", cost_tier=3, latency_tier=2, quality_tier=5,
+                 good_for=("reasoning","extraction","summarization","codegen"),
+                 notes="OpenAI GPT-4o; needs OPENAI_API_KEY"),
 ]}
+
+def missing_credential(profile_id: str) -> str | None:
+    """Return a one-line skip reason if the profile's provider has no usable credential, else None.
+    Lets the bake-off SKIP a model cleanly (exit 0) instead of running it into per-row auth failures."""
+    p = REGISTRY[profile_id]
+    if p.provider == "anthropic" and not os.getenv("ANTHROPIC_API_KEY", "").strip():
+        return "no ANTHROPIC_API_KEY"
+    if p.provider == "openai" and not os.getenv("OPENAI_API_KEY", "").strip():
+        return "no OPENAI_API_KEY"
+    if p.provider == "bedrock" and not (os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_PROFILE")):
+        return "no AWS credentials (AWS_ACCESS_KEY_ID / AWS_PROFILE)"
+    if p.provider == "hf" and not (os.getenv("HF_ENDPOINT_URL") or os.getenv("HUGGINGFACEHUB_API_TOKEN")):
+        return "no HF endpoint / HUGGINGFACEHUB_API_TOKEN"
+    return None
+
 
 def select_model(task_class: TaskClass = "reasoning", residency: Optional[Residency] = None,
                  max_cost_tier: int = 5, min_quality_tier: int = 1, prefer_open: bool = False) -> ModelProfile:

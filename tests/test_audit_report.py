@@ -26,19 +26,21 @@ def test_layer_count_is_computed_not_hardcoded():
 def test_bakeoff_parses_real_numbers():
     bo = ar.load_bakeoff()
     assert bo is not None, "bake-off doc missing — headline finding would be invisible"
-    assert bo["n_models"] == 3, bo["models"]
+    assert bo["n_models"] == 4, bo["models"]      # Claude · Qwen · Llama · GPT-4o (2 vendors + open weights)
     assert bo["n_scorers"] == 9
-    assert bo["all_ones"] is True                 # deterministic scorers 1.00 across all three models
-    assert any("qwen" in m.lower() for m in bo["models"])
-    assert any("llama" in m.lower() for m in bo["models"])
-    assert any("claude" in m.lower() for m in bo["models"])
+    # all_ones is whatever the REAL run measured — NOT asserted True. GPT-4o dipped on within_budget, so
+    # this is honestly False; the point is the number is read from a real report, never hardcoded (J-02).
+    assert isinstance(bo["all_ones"], bool)
+    for vendor in ("qwen", "llama", "claude", "gpt-4o"):
+        assert any(vendor in m.lower() for m in bo["models"]), vendor
 
 
 def test_bakeoff_table_renders_numbers_and_verdict():
     html = ar.bakeoff_table(ar.load_bakeoff())
-    assert "1.00" in html
-    assert "across ALL 3 models" in html
-    assert "schema_valid" in html
+    assert "1.00" in html                          # most cells are 1.00
+    assert "GPT-4o" in html and "schema_valid" in html
+    # the verdict is computed from the real data: with GPT-4o's within_budget dip it is NOT all 1.00
+    assert ("across ALL 4 models" in html) or ("NOT all 1.00" in html)
 
 
 def test_bakeoff_table_is_honest_when_data_missing():

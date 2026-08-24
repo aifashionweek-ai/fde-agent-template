@@ -13,7 +13,8 @@ mangum
 boto3
 pytest
 python-dotenv
-openai              # optional: embeddings for hybrid retrieval (EMBED_PROVIDER=openai)
+openai              # embeddings (EMBED_PROVIDER=openai) AND the GPT-4o bake-off provider (LLM_PROVIDER=openai)
+langchain-openai    # ChatOpenAI wrapper for the openai provider (D-008, gpt-4o-api)
 huggingface_hub     # deploy/hf_endpoint.py
 httpx               # fastapi.testclient transport — HITL-over-HTTP guard (tests/test_api_hitl.py, D-038)
 # optional guard layers (docs/04-guardrails.md): presidio-analyzer presidio-anonymizer transformers torch requests
