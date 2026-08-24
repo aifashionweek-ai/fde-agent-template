@@ -84,7 +84,7 @@ def run_profile(profile_id: str, from_cache: bool = False) -> dict:
     """Return {scorer: mean} for a profile. Live real calls, OR (from_cache) re-read the last run's
     results/bake-<profile>.json — same REAL numbers, no re-billing (used to regenerate the report)."""
     import json
-    cache = ROOT / "results" / f"bake-{profile_id}.json"
+    cache = ROOT / "evals" / "results" / f"bake-{profile_id}.json"   # where evals.harness writes results
     if from_cache and cache.exists():
         return _means_from_rows(json.loads(cache.read_text())["rows"])
     os.environ["MODEL_PROFILE"] = profile_id

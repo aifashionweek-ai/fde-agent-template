@@ -136,8 +136,15 @@ def missing_credential(profile_id: str) -> str | None:
         return "no ANTHROPIC_API_KEY"
     if p.provider == "openai" and not os.getenv("OPENAI_API_KEY", "").strip():
         return "no OPENAI_API_KEY"
-    if p.provider == "bedrock" and not (os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_PROFILE")):
-        return "no AWS credentials (AWS_ACCESS_KEY_ID / AWS_PROFILE)"
+    if p.provider == "bedrock":
+        # Detect the FULL boto3 chain (env, ~/.aws/credentials, SSO, instance role) — not just env vars,
+        # so a normal `aws configure` / default profile counts (a present CLI login should not be skipped).
+        try:
+            import boto3
+            if boto3.Session().get_credentials() is None:
+                return "no AWS credentials (configure `aws configure` or AWS_ACCESS_KEY_ID / AWS_PROFILE)"
+        except Exception:
+            return "no AWS credentials (boto3 could not resolve the credential chain)"
     if p.provider == "hf" and not (os.getenv("HF_ENDPOINT_URL") or os.getenv("HUGGINGFACEHUB_API_TOKEN")):
         return "no HF endpoint / HUGGINGFACEHUB_API_TOKEN"
     return None
