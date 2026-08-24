@@ -140,6 +140,10 @@ def evals(): return _serve_html(_REPO / "presentation" / "evals.html",          
 def deploy(): return _serve_html(_REPO / "presentation" / "deploy.html",                # 3-day plan from real gaps
                                  "python scripts/build_deploy.py")
 
+@app.get("/a2a", response_class=HTMLResponse, include_in_schema=False)
+def a2a(): return _serve_html(_REPO / "presentation" / "a2a.html",                       # agent-to-agent, from real JSON
+                              "python scripts/build_a2a.py")
+
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")
 def contract(): return AgentOutput.model_json_schema()
