@@ -14,7 +14,7 @@ class ScriptedLLM:
 
     def invoke(self, input):
         if isinstance(input, str):                       # plan node
-            return AIMessage(content='["reset alice access to vpn"]')
+            return AIMessage(content='["do the requested step"]')
         last = input[-1]
         if isinstance(last, ToolMessage):                # act after tools/denial -> final answer
             return AIMessage(content=json.dumps({

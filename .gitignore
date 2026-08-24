@@ -8,6 +8,7 @@ evals/results/
 .local/
 # private engineering canon — local only; never publish here
 engineering-canon.local.md
+jaswant-manifest.md
 append_lesson.py
 # local-only notes — never publish
 *.local.md
