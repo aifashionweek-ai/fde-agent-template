@@ -39,6 +39,9 @@ if lsof -i :8000 -sTCP:LISTEN >/dev/null 2>&1; then
   echo "ERROR: port 8000 is already in use — stop the other server first (lsof -i :8000)"; exit 1
 fi
 
+# --- self-heal the 12-stop showcase so /hub and every stop are live on a fresh clone (gitignored outputs) ---
+$PY -m presentation.build_all >/dev/null 2>&1 || true
+
 cat <<EOF
 ──────────────────────────────────────────────────────────────────────
   FDE Agent demo server starting on http://localhost:8000

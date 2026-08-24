@@ -25,3 +25,6 @@ tools/data_triage/*.findings.json
 tools/data_triage/*.clean_log.json
 tools/data_triage/*.cleaned.*
 tools/data_triage/messy-DATA-REPORT.html
+
+# showcase: generated stop pages (build outputs of `make showcase`; demo.sh self-heals them)
+presentation/*.html

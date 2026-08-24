@@ -25,7 +25,7 @@ curl -s -o /dev/null "$BASE/health" || { echo "ERROR: server did not become read
 
 echo
 echo "=== ROUTE 200 MATRIX ==="
-LIVE="/ /dashboard"
+LIVE="/ /dashboard /hub /business /problem /audit /infra /evals /deploy /a2a /signal /data /runnable"
 PENDING=""
 for p in $LIVE; do
   code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE$p")
