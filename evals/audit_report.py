@@ -20,11 +20,32 @@ def sh(cmd):
     except Exception: return ""
 
 def run_pytest():
-    """Real test counts from a live pytest run — not a remembered number."""
-    out = sh(f"{sys.executable} -m pytest tests -q --tb=no 2>&1") or ""   # same interpreter that runs the generator (bare 'python' may lack pytest)
+    """Real test counts AND the full per-test list from ONE live pytest run — captured via junit-xml and
+    persisted to evals/results/pytest-run.json so the audit page can drill to every test (name, file,
+    outcome), not just the count (J-02: the drill reads this real artifact). Returns (passed, failed, last, tests)."""
+    RESULTS.mkdir(exist_ok=True)
+    xmlp = RESULTS / "pytest-junit.xml"
+    out = sh(f"{sys.executable} -m pytest tests -q --tb=no --junit-xml={xmlp} 2>&1") or ""
     m = re.search(r"(\d+) passed", out); passed = int(m.group(1)) if m else 0
     m = re.search(r"(\d+) failed", out); failed = int(m.group(1)) if m else 0
-    return passed, failed, out.splitlines()[-1] if out else "no output"
+    last = out.splitlines()[-1] if out else "no output"
+    tests = []
+    if xmlp.exists():
+        import xml.etree.ElementTree as ET
+        try:
+            for tc in ET.parse(xmlp).getroot().iter("testcase"):
+                cls = tc.get("classname", "")            # e.g. tests.test_guards / tests.adversarial.test_attacks
+                fpath = (cls.replace(".", "/") + ".py") if cls else "?"
+                oc = ("failed" if (tc.find("failure") is not None or tc.find("error") is not None)
+                      else "skipped" if tc.find("skipped") is not None else "passed")
+                tests.append({"file": fpath, "name": tc.get("name", "?"), "outcome": oc})
+        except Exception:
+            pass
+        xmlp.unlink()
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    (RESULTS / "pytest-run.json").write_text(json.dumps(
+        {"generated": now, "passed": passed, "failed": failed, "total": len(tests), "tests": tests}, indent=2))
+    return passed, failed, last, tests
 
 def load_manifest():
     rows = []
@@ -35,9 +56,15 @@ def load_manifest():
 
 def load_latest_eval():
     files = sorted(RESULTS.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
-    files = [f for f in files if f.name != "AUDIT.html"]
-    if not files: return None
-    return json.loads(files[0].read_text())
+    files = [f for f in files if f.name not in ("AUDIT.html", "pytest-run.json")]  # pytest-run is the test list, not an eval
+    for f in files:                                    # newest eval-shaped file (has 'rows'), skip non-eval json
+        try:
+            d = json.loads(f.read_text())
+            if isinstance(d, dict) and "rows" in d:
+                return d
+        except Exception:
+            continue
+    return None
 
 def slice_scores(payload):
     if not payload: return {}
@@ -202,8 +229,98 @@ def bakeoff_table(bo):
             f'<table class="slices bakeoff"><tr><th>scorer</th>{head}</tr>{body}</table>'
             f'<p class="alt" style="margin-top:4px">source: {html.escape(bo["source"])}</p>')
 
+# ---- MANIFEST D-row → test-function mapping (the real join; doc/file-backed rows labeled honestly) ----
+_DROW2LAYER = {mid: L["id"] for L in LAYERS for mid in L["manifest"]}
+_LNAME = {L["id"]: L["name"] for L in LAYERS}
+
+
+def parse_test_refs(guard: str):
+    """From a MANIFEST guard cell → (list of (file, fn), is_test). A guard with no 'tests/…::fn' is
+    doc/file-backed (D-006/008/020/023/027) — labeled as such, never shown as a test (J-02)."""
+    if "tests/" not in guard or "::" not in guard:
+        return [], False
+    m = re.search(r"(tests/\S+\.py)", guard)
+    if not m:
+        return [], False
+    fpath = m.group(1)
+    fns = re.findall(r"::(\w+)", guard)
+    return [(fpath, fn) for fn in fns], bool(fns)
+
+
+def test_layer_index(manifest):
+    """(file, fn) → (D-row, layer-id) for every test a MANIFEST row names."""
+    idx = {}
+    for r in manifest:
+        refs, is_test = parse_test_refs(r["guard"])
+        if not is_test:
+            continue
+        for f, fn in refs:
+            idx[(f, fn)] = (r["id"], _DROW2LAYER.get(r["id"]))
+    return idx
+
+
+def per_test_drill(tests, manifest):
+    """The full per-test list from pytest-run.json, grouped by layer via the MANIFEST mapping."""
+    idx = test_layer_index(manifest)
+    groups = {}
+    for t in tests:
+        base = t["name"].split("[")[0]                 # strip parametrize suffix to match the MANIFEST fn
+        lid = (idx.get((t["file"], base)) or (None, None))[1]
+        groups.setdefault(lid or "—", []).append(t)
+    order = [L["id"] for L in LAYERS] + ["—"]
+    out = ""
+    for lid in order:
+        ts = groups.get(lid)
+        if not ts:
+            continue
+        title = f'{lid} · {_LNAME[lid]}' if lid != "—" else "Additional tests (not a D-row guard)"
+        npass = sum(1 for t in ts if t["outcome"] == "passed")
+        cls = "ok" if npass == len(ts) else "bad"
+        rows = "".join(
+            f'<tr><td class="mono">{html.escape(t["name"])}</td>'
+            f'<td class="mono dim">{html.escape(t["file"].replace("tests/", ""))}</td>'
+            f'<td class="{"ok" if t["outcome"]=="passed" else "bad"}">{html.escape(t["outcome"])}</td></tr>'
+            for t in ts)
+        out += (f'<details class="tg"><summary><span class="{cls}">{html.escape(title)}</span> '
+                f'<span class="mono dim">({npass}/{len(ts)})</span></summary>'
+                f'<table class="tt"><tbody>{rows}</tbody></table></details>')
+    return out
+
+
+def tool_log_section():
+    """Real per-tool telemetry spans (call/args/result/status/proposal_hash/hash_match) from the committed
+    fixture. Honest scope: in-process + fixture per run, NOT a durable append-only log (documented S2 gap)."""
+    f = ROOT / "evals" / "fixtures" / "telemetry_runs.json"
+    if not f.exists():
+        return '<p class="noev">No captured runs — run scripts/capture_runs.py. Not fabricated.</p>'
+    data = json.loads(f.read_text())
+    parts = ""
+    for name, rec in data.items():
+        spans = (rec.get("trace", {}) or {}).get("spans", [])
+        rows = ""
+        for s in spans:
+            for t in (s.get("tools") or []):
+                st = str(t.get("status", ""))
+                hm = t.get("hash_match")
+                hm_s = "match ✓" if hm is True else "MISMATCH ✗" if hm is False else "—"
+                stc = "ok" if st == "PASS" else "bad" if st in ("DENIED", "REFUSED") else ""
+                rows += (f'<tr><td class="mono">{html.escape(t.get("name",""))}({html.escape(str(t.get("args",{}))[:44])})</td>'
+                         f'<td class="{stc}">{html.escape(st)}</td>'
+                         f'<td class="mono dim">{html.escape(str(t.get("proposal_hash","") or "")[:10])} {hm_s}</td>'
+                         f'<td class="mono dim">{html.escape(str(t.get("result",""))[:56])}</td></tr>')
+        if rows:
+            parts += (f'<details class="tg"><summary>{html.escape(str(rec.get("label", name)))}</summary>'
+                      f'<table class="tt"><thead><tr><th>tool(args)</th><th>status</th><th>hash</th><th>result</th></tr></thead>'
+                      f'<tbody>{rows}</tbody></table></details>')
+    caveat = ('<p class="alt">Honest scope: these are per-run telemetry spans (in-process + committed fixture '
+              '<code>evals/fixtures/telemetry_runs.json</code>). There is <b>no durable append-only audit log</b> — '
+              'a server restart wipes live state (the documented S2 gap). "Every tool logged" means per run, in this '
+              'trace and the <code>/dashboard</code>, not a persistent trail.</p>')
+    return (parts or '<p class="noev">No tool spans in the captured runs.</p>') + caveat
+
+
 def build():
-    passed, failed, last = run_pytest()
+    passed, failed, last, tests = run_pytest()
     v, vcolor = verdict(passed, failed)
     manifest = load_manifest()
     payload = load_latest_eval()
@@ -240,7 +357,14 @@ def build():
         mrows = ""
         for mid in L["manifest"]:
             row = next((r for r in manifest if r["id"]==mid), None)
-            if row: mrows += f'<li><b>{mid}</b> {html.escape(row["directive"][:90])} <span class="ok">✓ {html.escape(row["guard"].split("::")[0][:40])}</span></li>'
+            if not row: continue
+            refs, is_test = parse_test_refs(row["guard"])
+            if is_test:
+                fns = ", ".join(fn for _, fn in refs)
+                badge = f'<span class="ok">✓ {html.escape(fns[:90])}</span>'
+            else:  # D-006/008/020/023/027 etc — real evidence, but a file/doc, not a test fn (honest)
+                badge = f'<span class="dim">file-backed, no test fn — {html.escape(row["guard"][:56])}</span>'
+            mrows += f'<li><b>{mid}</b> {html.escape(row["directive"][:88])}<br>{badge}</li>'
         return f'''
         <details class="layer">
           <summary><span class="lic">{L["icon"]}</span> <span class="lid">{L["id"]}</span> {html.escape(L["name"])}
@@ -296,6 +420,15 @@ table.facts td{{padding:4px 0;font-size:12px}} table.bakeoff td,table.bakeoff th
 table.slices th,table.slices td{{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}}
 .docs{{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}} .doc{{background:#eef2ff;color:var(--acc);text-decoration:none;padding:5px 10px;border-radius:6px;font-size:12px}}
 .foot{{color:var(--dim);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}}
+.mono{{font-family:var(--mono);font-size:12px}} .dim{{color:var(--dim)}}
+.drill{{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:14px 0;padding:12px 16px}}
+.drill>summary{{cursor:pointer;font-size:14px}} .drillbody{{margin-top:10px;columns:2;column-gap:20px}}
+@media (max-width:720px){{.drillbody{{columns:1}}}}
+.tg{{border:1px solid var(--line);border-radius:8px;margin:6px 0;padding:6px 10px;break-inside:avoid}}
+.tg>summary{{cursor:pointer;font-size:13px}}
+table.tt{{width:100%;border-collapse:collapse;margin-top:6px}}
+table.tt td,table.tt th{{padding:3px 6px;border-bottom:1px solid #f1f3f7;font-size:11.5px;text-align:left;vertical-align:top}}
+ul.manifest li{{margin:6px 0}}
 </style></head><body><div class="wrap">
 <h1>FDE Agent — Multilayer Audit</h1>
 <p class="sub">Enterprise IT-Ops & Employee Support agent · every number below is read from a real log, git, or a live pytest run. No asserted greens.</p>
@@ -311,6 +444,9 @@ table.slices th,table.slices td{{padding:6px 8px;text-align:left;border-bottom:1
   <div class="chip">generated <b>{now}</b></div>
 </div>
 
+<details class="drill"><summary><b>{passed} pass</b> · drill to every test (name · file · outcome), grouped by layer &nbsp;<span class="mono dim">reads evals/results/pytest-run.json</span></summary>
+<div class="drillbody">{per_test_drill(tests, manifest)}</div></details>
+
 <h2>The {len(LAYERS)} layers — what, why, alternatives, evidence</h2>
 <p class="sub">Click any layer to drill down. Evidence bars are scorer means from the latest eval run ({html.escape(exp)}).</p>
 {cards}
@@ -318,6 +454,11 @@ table.slices th,table.slices td{{padding:6px 8px;text-align:left;border-bottom:1
 <h2>Eval scores by slice</h2>
 {"<table class='slices'>"+slice_html+"</table>" if slice_html else "<p class='sub'>No eval run found. Run <code>EXPERIMENT=baseline python -m evals.harness</code> then regenerate.</p>"}
 <p class="sub" style="margin-top:10px">Deterministic scorers (schema, PII, grounding, HITL, budget, path) are the safety <b>invariants</b> — they must read 1.00, and <b>grounding at 1.00 is the real correctness signal</b> (every citation ⊆ retrieved evidence). <code>factual</code> and <code>rubric_pass</code> are LLM-judge <i>quality</i> scores: a correctness rubric that rewards a right answer regardless of extra helpful detail, and still fails a wrong one. Some judge strictness is inherent — treat these as nuance, not pass/fail; the invariants above are pass/fail.</p>
+
+<h2>Tool-call log — real telemetry spans</h2>
+<p class="sub">Every tool execution is logged with its call, args, result, control status, and the proposal-hash
+match. Click a scenario to drill. Reads <code>evals/fixtures/telemetry_runs.json</code> (also live per run at <code>/trace/&lt;id&gt;</code> and in <code>/dashboard</code>).</p>
+{tool_log_section()}
 
 <h2>Design deep-dives</h2>
 <p class="sub">Each layer has a full playbook:</p>

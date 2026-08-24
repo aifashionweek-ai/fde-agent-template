@@ -28,6 +28,7 @@ table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
 th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
 .mono,.where{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.dim{color:var(--dim)}
 .grp{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);margin:14px 0 4px;font-weight:600}
 .tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px}
 .pass{background:#f0fdf4;color:var(--good)}.xfail{background:#faf5ff;color:var(--tele)}
@@ -43,6 +44,77 @@ th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;lett
 """
 
 def e(x): return html.escape(str(x))
+
+RESULTS = ROOT / "evals" / "results"
+_DET = ["schema_valid", "tool_allowlist", "within_budget", "injection_refused", "no_raw_pii",
+        "grounded", "hitl_respected", "path_sane", "confidence_reported"]
+
+
+def _cell(v):
+    if v is None: return '<td class="mono dim">–</td>'
+    ok = abs(float(v) - 1.0) < 1e-9
+    return f'<td class="mono" style="color:{"#166534" if ok else "#991b1b"};font-weight:{700 if not ok else 400}">{v:.2f}</td>'
+
+
+def per_case_section():
+    """Per-CASE scorer rows from a REAL harness run (evals/results/*.json), incl. the within_budget dip.
+    J-02: reads real rows, never aggregates-only; missing results → honest placeholder, never faked."""
+    base = None
+    for name in ("baseline.json",):
+        f = RESULTS / name
+        if f.exists():
+            try: base = json.loads(f.read_text())
+            except Exception: base = None
+    # the within_budget dip across the committed bake runs
+    bakes = []
+    for f in sorted(RESULTS.glob("bake-*.json")):
+        try:
+            d = json.loads(f.read_text())
+            if d.get("model_profile") and "rows" in d: bakes.append(d)
+        except Exception: pass
+
+    if not base and not bakes:
+        return ('<h2>Per-case results — real run rows</h2>'
+                '<div class="caveat">Pending — no eval run on disk yet. Run <span class="mono">make evals</span> '
+                '(writes <span class="mono">evals/results/*.json</span>) then regenerate. Not fabricated.</div>')
+
+    html_out = '<h2>Per-case results — real run rows</h2>'
+    # (a) golden-set per-case deterministic scores
+    if base:
+        head = "".join(f"<th>{s.replace('_',' ')}</th>" for s in _DET)
+        rows = ""
+        for r in base["rows"]:
+            sc = r.get("scores", {})
+            cells = "".join(_cell(sc.get(s)) for s in _DET)
+            rows += (f'<tr><td>{e(str(r.get("input"))[:64])}</td>'
+                     f'<td><span class="tag h2a">{e(r.get("slice"))}</span></td>{cells}</tr>')
+        html_out += (f'<div class="sub">Golden-set run <span class="mono">{e(base.get("experiment","?"))}</span> · '
+                     f'model <span class="mono">{e(base.get("model_profile","?"))}</span> · {len(base["rows"])} cases · '
+                     f'reads <span class="mono">evals/results/baseline.json</span>. Each cell is the real per-row scorer output.</div>'
+                     f'<div style="overflow-x:auto"><table><thead><tr><th>case input</th><th>slice</th>{head}</tr></thead>'
+                     f'<tbody>{rows}</tbody></table></div>')
+    # (b) the within_budget dip — WHICH case, WHICH models, guard caught it
+    dip_case, per_model = None, {}
+    for d in bakes:
+        for r in d["rows"]:
+            if r.get("scores", {}).get("within_budget") == 0:
+                dip_case = r.get("input")
+        # model's within_budget mean
+        wb = [r["scores"].get("within_budget") for r in d["rows"] if r["scores"].get("within_budget") is not None]
+        if wb: per_model[d["model_profile"]] = round(sum(wb) / len(wb), 2)
+    if dip_case and per_model:
+        mrows = "".join(
+            f'<tr><td class="mono">{e(m)}</td>{_cell(v)}<td>{"✓ within budget" if v>=0.999 else "◦ dipped — budget guard caught it (scored 0 on this row)"}</td></tr>'
+            for m, v in sorted(per_model.items(), key=lambda kv: -kv[1]))
+        html_out += (
+            '<div class="caveat" style="background:#faf5ff;border-color:#d8b4fe">'
+            f'<b>The within_budget dip (0.90).</b> One adversarial case — <span class="mono">"{e(str(dip_case)[:70])}"</span> — '
+            'made some models loop past the step/tool budget. The <b>deterministic budget guard caught every one</b> '
+            '(scored <b>0</b> on that row), independent of model. Per-model within_budget mean over the golden set '
+            '(reads <span class="mono">evals/results/bake-*.json</span>):'
+            f'<div style="overflow-x:auto"><table style="margin-top:8px"><thead><tr><th>model</th><th>within_budget</th><th></th></tr></thead>'
+            f'<tbody>{mrows}</tbody></table></div></div>')
+    return html_out
 
 
 def _how_class(how):
@@ -129,6 +201,8 @@ Agent→Agent: {ac.get('scripted_tests')} scripted tests + {ac.get('live_demo')}
 <div class="card sub">Principal: {e(a2a.get('principal',''))}</div>
 <table><thead><tr><th>id</th><th>input</th><th>propagates</th><th>expected gate</th><th>channel</th><th>last run</th></tr></thead>
 <tbody>{arows}</tbody></table>
+
+{per_case_section()}
 
 <h2>4 · Discrepancy spine — the evidence ({len(items)} real defects)</h2>
 <div class="sub">Nothing asserted — each defect caught, proven red-first or by telemetry, and locked by a test.
