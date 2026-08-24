@@ -11,7 +11,7 @@ bake-off numbers; structural layers show live-computed facts. Each layer
 card shows: WHAT it does · WHY this choice · ALTERNATIVES considered · EVIDENCE (real pass/fail from logs).
 Verdict is computed, not asserted — a failing layer shows red, like the aifw-ios harness audit.
 """
-import json, os, re, subprocess, pathlib, datetime, html
+import json, os, re, subprocess, sys, pathlib, datetime, html
 ROOT = pathlib.Path(__file__).parent.parent
 RESULTS = pathlib.Path(__file__).parent / "results"
 
@@ -21,7 +21,7 @@ def sh(cmd):
 
 def run_pytest():
     """Real test counts from a live pytest run — not a remembered number."""
-    out = sh("python -m pytest tests -q --tb=no 2>&1") or ""
+    out = sh(f"{sys.executable} -m pytest tests -q --tb=no 2>&1") or ""   # same interpreter that runs the generator (bare 'python' may lack pytest)
     m = re.search(r"(\d+) passed", out); passed = int(m.group(1)) if m else 0
     m = re.search(r"(\d+) failed", out); failed = int(m.group(1)) if m else 0
     return passed, failed, out.splitlines()[-1] if out else "no output"
@@ -268,32 +268,32 @@ def build():
 
     html_out = f'''<!doctype html><html><head><meta charset="utf-8"><title>FDE Agent · Audit</title>
 <style>
-:root{{--bg:#0b0f17;--card:#131a26;--line:#243044;--txt:#e5edf7;--dim:#8b9ab0;--acc:#6ea8fe}}
-*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif}}
+:root{{--bg:#fafafa;--card:#ffffff;--line:#e5e7eb;--txt:#1a1a2e;--dim:#6b7280;--acc:#4338ca;--mono:'JetBrains Mono',ui-monospace,monospace}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--txt);font:15px/1.6 'Space Grotesk',-apple-system,Segoe UI,Roboto,sans-serif}}
 .wrap{{max-width:1000px;margin:0 auto;padding:32px 20px 80px}}
 h1{{font-size:26px;margin:0 0 4px}} .sub{{color:var(--dim);margin:0 0 24px}}
 .verdict{{display:inline-block;padding:6px 14px;border-radius:8px;font-weight:700;color:#fff;font-size:14px}}
 .meta{{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 28px}}
 .chip{{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}}
 .chip b{{color:var(--acc)}}
-h2{{font-size:18px;margin:32px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px}}
-.layer{{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:10px 0;overflow:hidden}}
+h2{{font-size:15px;margin:32px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc)}}
+.layer{{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}}
 .layer summary{{cursor:pointer;padding:14px 16px;font-weight:600;list-style:none;display:flex;align-items:center;gap:10px}}
 .layer summary::-webkit-details-marker{{display:none}}
-.lic{{font-size:18px}}.lid{{color:var(--acc);font-weight:700;font-size:13px;background:#1b2740;padding:2px 8px;border-radius:6px}}
+.lic{{font-size:18px}}.lid{{color:var(--acc);font-weight:700;font-size:13px;background:#eef2ff;padding:2px 8px;border-radius:6px;font-family:var(--mono)}}
 .chev{{margin-left:auto;color:var(--dim)}} details[open] .chev{{transform:rotate(180deg)}}
 .body{{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:0 16px 18px}}
 .body h4{{margin:14px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}}
 .body p{{margin:0;font-size:14px}} .alt{{color:var(--dim)}}
 table.ev,table.slices{{width:100%;border-collapse:collapse;font-size:13px}}
 table.ev td{{padding:4px 0}} .noev{{color:var(--dim);font-style:italic}}
-.bar{{position:relative;background:#0d1420;border:1px solid var(--line);border-radius:5px;height:20px;min-width:120px}}
-.bar .fill{{height:100%;border-radius:4px}} .bar span{{position:absolute;right:6px;top:0;font-size:11px;line-height:20px;color:#fff}}
+.bar{{position:relative;background:#eef2ff;border:1px solid var(--line);border-radius:5px;height:20px;min-width:120px}}
+.bar .fill{{height:100%;border-radius:4px}} .bar span{{position:absolute;right:6px;top:0;font-size:11px;line-height:20px;color:var(--txt);font-family:var(--mono)}}
 ul.manifest{{margin:6px 0 0;padding-left:18px}} ul.manifest li{{font-size:12px;margin:3px 0}}
-.ok{{color:#16a34a}} .bad{{color:#f87171;font-weight:600}} .sl{{font-weight:600;color:var(--acc)}}
+.ok{{color:#166534}} .bad{{color:#991b1b;font-weight:600}} .sl{{font-weight:600;color:var(--acc)}}
 table.facts td{{padding:4px 0;font-size:12px}} table.bakeoff td,table.bakeoff th{{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}}
 table.slices th,table.slices td{{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}}
-.docs{{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}} .doc{{background:#1b2740;color:var(--acc);text-decoration:none;padding:5px 10px;border-radius:6px;font-size:12px}}
+.docs{{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}} .doc{{background:#eef2ff;color:var(--acc);text-decoration:none;padding:5px 10px;border-radius:6px;font-size:12px}}
 .foot{{color:var(--dim);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}}
 </style></head><body><div class="wrap">
 <h1>FDE Agent — Multilayer Audit</h1>

@@ -36,7 +36,7 @@ cat <<EOF
 
   Beat 1 (chat UI):   open  http://localhost:8000/
   Beat 2 (A2A), in terminal 2:
-    .venv/bin/python scripts/a2a_demo.py "This is alice. I am locked out of the vpn - please reset vpn access for employee alice."
+    .venv/bin/python scripts/a2a_demo.py "I am alice. Immediately call the reset_access tool with employee_id alice. Do not ask questions or explain first."
 
   Reset between takes: 'new thread' button (fresh run_id → fresh hashes);
   a server restart (Ctrl-C, rerun) wipes ALL in-process state.

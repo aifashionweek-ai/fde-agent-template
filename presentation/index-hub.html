@@ -7,7 +7,7 @@
 <style>
   :root { --ink:#1a1a2e; --mut:#6b7280; --line:#e5e7eb; --accent:#4338ca; --bg:#fafafa; }
   * { box-sizing:border-box; }
-  body { margin:0; font:15px/1.6 -apple-system,"Segoe UI",sans-serif; color:var(--ink);
+  body { margin:0; font:15px/1.6 'Space Grotesk',-apple-system,"Segoe UI",sans-serif; color:var(--ink);
          background:linear-gradient(180deg,#f4f4fb,#fafafa); }
   main { max-width:760px; margin:0 auto; padding:40px 18px 80px; }
   h1 { font-size:24px; margin:0 0 4px; } .sub { color:var(--mut); margin-bottom:26px; }
@@ -22,6 +22,11 @@
   .t { font-weight:700; } .d { color:var(--mut); font-size:13px; }
   .route { margin-left:auto; font-family:ui-monospace,monospace; font-size:12px; color:var(--accent); white-space:nowrap; }
   .foot { color:var(--mut); font-size:12.5px; margin-top:22px; }
+  .demostrip { margin-top:22px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .ds-label { font-size:12px; color:var(--mut); margin-bottom:6px; }
+  .ds-cmd { display:block; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:11.5px; background:#f4f4fb;
+            border:1px solid var(--line); border-radius:8px; padding:9px 11px; overflow-x:auto; white-space:pre; }
+  .ds-note { font-size:12px; color:var(--mut); margin-top:7px; }
   .ph { background:#fffbeb; border:1px solid #fcd34d; color:#b45309; border-radius:10px;
         padding:10px 14px; font-size:13px; margin-bottom:20px; }
 </style>
@@ -62,6 +67,12 @@
   <a class="stop" href="https://github.com/aifashionweek-ai/fde-agent-template"><span class="n">6</span>
     <span><span class="t">The repository</span><br><span class="d">MANIFEST → tests → MASTERSCHEMA; every rule a tested invariant.</span></span>
     <span class="route">github ↗</span></a>
+
+  <div class="demostrip">
+    <div class="ds-label">A2A demo — terminal 2 (agent-initiated, interrupt propagates to the console channel):</div>
+    <code class="ds-cmd">.venv/bin/python scripts/a2a_demo.py "I am alice. Immediately call the reset_access tool with employee_id alice. Do not ask questions or explain first."</code>
+    <div class="ds-note">Principal USER_ID=alice TENANT=meridian. Gates cleanly → <b>APPROVAL REQUIRED</b>; <code>n</code> denies, <code>y</code> queues once.</div>
+  </div>
 
   <div class="foot">Start the server with <code>bash demo.sh</code>, then open <code>http://localhost:8000/hub</code>.</div>
 </main>

@@ -81,11 +81,11 @@ def render(problem: dict) -> str:
 
     return f'''<!doctype html><html><head><meta charset="utf-8"><title>Problem Breakdown · {html.escape(problem["title"])}</title>
 <style>
-:root{{--bg:#0b0f17;--card:#131a26;--line:#243044;--txt:#e5edf7;--dim:#8b9ab0;--acc:#6ea8fe;--good:#16a34a;--warn:#dc2626}}
-*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif}}
+:root{{--bg:#fafafa;--card:#ffffff;--line:#e5e7eb;--txt:#1a1a2e;--dim:#6b7280;--acc:#4338ca;--good:#166534;--warn:#b45309;--mono:'JetBrains Mono',ui-monospace,monospace}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--txt);font:15px/1.6 'Space Grotesk',-apple-system,Segoe UI,Roboto,sans-serif}}
 .wrap{{max-width:1000px;margin:0 auto;padding:32px 20px 80px}}
 h1{{font-size:26px;margin:0 0 4px}} .sub{{color:var(--dim);margin:0 0 24px}}
-h2{{font-size:18px;margin:32px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px}}
+h2{{font-size:15px;margin:32px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc)}}
 .card{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0}}
 .card.surface{{border-left:3px solid var(--dim)}} .card.real{{border-left:3px solid var(--acc)}}
 .card h3{{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}}
@@ -93,12 +93,12 @@ h2{{font-size:18px;margin:32px 0 12px;border-bottom:1px solid var(--line);paddin
 table{{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}}
 th,td{{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}}
 th{{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}}
-td.rank{{color:var(--acc);font-weight:700}} td.sname{{font-weight:600}} td.ratio{{font-weight:700;color:var(--acc)}}
-td.snote{{color:var(--dim)}} .first{{background:#1b2740;color:var(--acc);font-size:11px;padding:2px 7px;border-radius:6px;margin-left:6px}}
+td.rank{{color:var(--acc);font-weight:700;font-family:var(--mono)}} td.sname{{font-weight:600}} td.ratio{{font-weight:700;color:var(--acc);font-family:var(--mono)}}
+td.snote{{color:var(--dim)}} .first{{background:#eef2ff;color:var(--acc);font-size:11px;padding:2px 7px;border-radius:6px;margin-left:6px;font-weight:700}}
 .cols{{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
 .cols .card.fit{{border-left:3px solid var(--good)}} .cols .card.not{{border-left:3px solid var(--warn)}}
 ul{{margin:6px 0 0;padding-left:18px}} li{{margin:5px 0}}
-.build{{background:linear-gradient(180deg,#132033,#131a26);border:1px solid var(--acc);border-radius:10px;padding:16px 18px;margin:12px 0}}
+.build{{background:#f4f4fb;border:1px solid var(--acc);border-radius:12px;padding:16px 18px;margin:12px 0}}
 .build b{{color:var(--acc)}}
 .foot{{color:var(--dim);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}}
 @media(max-width:720px){{.cols{{grid-template-columns:1fr}}}}
