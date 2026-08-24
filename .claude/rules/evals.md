@@ -17,7 +17,7 @@ The golden set is the contract, not an afterthought. Follow this when touching a
 - **The gate runs OFFLINE.** `evals/gate.py` reads a committed `results/*.json` file; it does not call the
   network. `evals/harness.py` produces that file (and `run_evals.py` also pushes to Braintrust). CI must not
   be network-coupled.
-- **Reports are computed from evidence.** `audit_report.py` and `problem_report.py` read real files / live
-  pytest / git — if evidence is missing a layer says "NO EVIDENCE". Never author a green number.
+- **Reports are computed from evidence.** Any report/verdict reads real files / live pytest / git — if
+  evidence is missing, say "NO EVIDENCE". Never author a green number.
 - **Every eval-touching directive gets a catch-proven test** in `tests/` referenced from `MANIFEST.md`
   (J-03). Prove it goes red when the property is removed.

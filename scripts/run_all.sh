@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bring the whole demo live and self-verify. Usage: bash scripts/run_all.sh [--scenarios]
-#   (default) start server if needed, self-heal reports, print the 200 route matrix, DEMO READY.
+#   (default) start server if needed, print the 200 route matrix, DEMO READY.
 #   --scenarios  also fire the chat + a2a scenarios headless and print each verdict (needs a model key).
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -23,9 +23,6 @@ for i in $(seq 1 25); do
 done
 curl -s -o /dev/null "$BASE/health" || { echo "ERROR: server did not become ready"; [ "$started" = 1 ] && tail -5 /tmp/run_all_srv.log; exit 1; }
 
-# demo.sh self-heals PROBLEM.html + AUDIT.html on startup; confirm they exist
-done
-
 echo
 echo "=== ROUTE 200 MATRIX ==="
 LIVE="/ /dashboard"
@@ -41,4 +38,4 @@ done
 
 
 echo
-echo "DEMO READY — open http://localhost:8000/hub"
+echo "DEMO READY — open http://localhost:8000/  (governed chat)"

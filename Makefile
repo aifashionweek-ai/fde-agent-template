@@ -1,4 +1,4 @@
-.PHONY: setup check evals evals-braintrust gate run demo demo-all deploy preflight hf smoke bakeoff harness audit problem mcp
+.PHONY: setup check evals evals-braintrust gate run demo demo-all deploy preflight hf smoke bakeoff harness mcp
 setup:     ; pip install -r requirements.txt && cp -n .env.example .env || true
 demo:      ; bash demo.sh
 demo-all:  ; bash scripts/run_all.sh $(ARGS)
@@ -13,6 +13,4 @@ hf:        ; python deploy/hf_endpoint.py $(REPO) --gpu $(GPU)
 smoke:     ; bash scripts/smoke.sh
 bakeoff:   ; bash scripts/model_bakeoff.sh $(PROFILES)
 harness:   ; EXPERIMENT=$(EXP) python -m evals.harness
-audit:     ; python -m evals.audit_report
-problem:   ; python -m evals.problem_report
 mcp:       ; python -m agent.mcp_server --manifest

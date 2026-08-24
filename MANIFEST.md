@@ -14,6 +14,7 @@ tools, output contract) is the four SLOTs — fill those, leave everything below
 | D-005 | Input + output PII redaction; prompt-injection detection (layered)        | tests/test_frame.py::test_input_guard_redacts_and_refuses | ✅ |
 | D-011 | Retrieval is ROUTED: tenant isolation applied before scoring              | tests/test_retrieval.py::test_tenant_isolation_is_structural | ✅ |
 | D-012 | Output is GROUNDED: citations ⊆ retrieved ids; ungrounded → capped/reject | tests/test_frame.py::test_grounding_caps_confidence       | ✅ |
+| D-025 | MCP publishes READ tools only; side-effect/approval tools are WITHHELD (J-07) | tests/test_mcp.py::test_no_action_tool_is_published       | ✅ |
 | D-033 | Deterministic authorization (NOT the LLM): tenant isolation + self-only action unless admin | tests/test_frame.py::test_authz_self_only_and_tenant | ✅ |
 | D-034 | Approval integrity + idempotency: approval binds to proposal_hash; tamper REFUSED; replay = idempotent skip | tests/test_approval.py::test_approve_alice_execute_bob_is_refused | ✅ |
 | D-042 | Identity comparisons normalized (NFKC+strip+casefold) before compare      | tests/test_frame.py::test_authz_identity_normalized       | ✅ |

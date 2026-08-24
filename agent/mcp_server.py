@@ -1,11 +1,11 @@
 """MCP server — exposes the agent's READ tools to MCP clients (Claude Desktop, IDEs, other agents).
 
-READ-ONLY BY CONSTRUCTION (J-07). Only no-side-effect tools are published here. The five action tools
-(submit_action, submit_action, provision_resource, remember, escalate_to_human) are side effects and are
-NEVER exposed over MCP — they stay behind the agent's HITL approval node. An MCP client physically cannot
-trigger a side effect through this server: read_tools() is derived from the tool registry's `side_effect`
-flag, and build_server() asserts every published tool is non-side-effecting before it starts. If the
-registry ever drifts so an action tool looks read-only, the server refuses to start (fail loud, J-04).
+READ-ONLY BY CONSTRUCTION (J-07). Only no-side-effect tools are published here. Action tools (the
+skeleton's example is submit_action; a domain adds its own) are side effects and are NEVER exposed over
+MCP — they stay behind the agent's HITL approval node. An MCP client physically cannot trigger a side
+effect through this server: read_tools() is derived from the tool registry's `side_effect` flag, and
+build_server() asserts every published tool is non-side-effecting before it starts. If the registry ever
+drifts so an action tool looks read-only, the server refuses to start (fail loud, J-04).
 
 The `mcp` package is an OPTIONAL dependency. Importing this module never requires it, so
 `python update.py --check` and the whole test suite run with `mcp` uninstalled. Install only to serve:
@@ -16,7 +16,7 @@ The `mcp` package is an OPTIONAL dependency. Importing this module never require
 Why read-only over MCP: MCP hands tools to a client we don't govern (its own model decides when to call).
 Reads are safe to delegate — they are tenant/clearance-scoped inside the tool itself. Writes are decisions;
 a decision needs the agent's approval node and a human, which an external MCP client bypasses. So writes
-never leave the governed graph. (docs/13-mcp-integration.md)
+never leave the governed graph. Boundary tested in tests/test_mcp.py (D-025).
 """
 from __future__ import annotations
 import json, pathlib

@@ -38,7 +38,7 @@ guard_input (PII scrub + injection + memory recall)
   → finalize (schema-validate + grounding + egress PII scrub)
 ```
 Every node appends to `path`; the result carries `{path, steps, tool_calls}`. Traced in LangSmith, scored in
-Braintrust. See `docs/ARCHITECTURE.md` and `docs/14-safety-tracing-infra.md`.
+Braintrust. See `README.md` (what's in the box) and `docs/BUILD-ORDER.md` (the fill sequence).
 
 ## Key files
 | Area | File | Notes |
@@ -47,19 +47,16 @@ Braintrust. See `docs/ARCHITECTURE.md` and `docs/14-safety-tracing-infra.md`.
 | State/contract | `agent/state.py` | `AgentState`, `AgentOutput` (the eval contract) |
 | Model registry | `agent/models.py` | `select_model(task, residency, cost, quality, license)` — deterministic |
 | Retrieval | `agent/retrieval.py` | provenance + tenant/sensitivity/source filters BEFORE scoring |
-| Guards | `agent/guards.py` | 6 layers (docs/04) |
+| Guards | `agent/guards.py` | 6 layers |
 | Memory | `agent/memory.py` | 3 kinds, tenant+user scoped, approval-gated writes |
 | Tools | `agent/tools.py` + `tool_registry.json` | read (no approval) vs action (HITL) |
-| MCP | `agent/mcp_server.py` | publishes READ tools only (docs/13) |
+| MCP | `agent/mcp_server.py` | publishes READ tools only; boundary tested (`tests/test_mcp.py`, D-025) |
 | Evals | `evals/harness.py` · `evals/gate.py` | harness writes `results/*.json`; gate enforces OFFLINE |
-| Reports | `evals/audit_report.py` · `evals/problem_report.py` | HTML from real evidence |
 | Governance | `MANIFEST.md` · `MASTERSCHEMA.md` · `update.py` | directives ↔ contracts ↔ guards |
 
 ## Commands
 ```bash
 make check       # python update.py --check — regen registry + drift checks + pytest (the gate)
-make audit       # evals/audit_report.py — multilayer audit HTML from real evidence
-make problem     # evals/problem_report.py — business-problem breakdown HTML
 make mcp         # agent/mcp_server.py --manifest — show what MCP would publish/withhold
 make evals       # run_evals.py (pushes to Braintrust)
 make run         # uvicorn api.main:app

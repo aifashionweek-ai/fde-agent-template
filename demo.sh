@@ -25,8 +25,6 @@ if lsof -i :8000 -sTCP:LISTEN >/dev/null 2>&1; then
   echo "ERROR: port 8000 is already in use — stop the other server first (lsof -i :8000)"; exit 1
 fi
 
-# Self-heal the generated (gitignored) reports so /problem and /audit are live on a fresh clone.
-
 cat <<EOF
 ──────────────────────────────────────────────────────────────────────
   FDE Agent demo server starting on http://localhost:8000

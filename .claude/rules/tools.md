@@ -18,8 +18,8 @@
 `agent/mcp_server.py` derives its published set from the registry (`side_effect == false`). Adding a read
 tool exposes it over MCP automatically; adding an action tool withholds it automatically. `build_server()`
 asserts no side-effect / approval-gated tool is ever published, and refuses to boot otherwise. Guarded by
-the MCP invariant (build_server asserts read-only).
+`tests/test_mcp.py` (D-025).
 
 ## Invariant
 An agent that answers is useful; one that ACTS is valuable — but every side effect is human-approved.
-"Agent proposes, human disposes." That property is tested (`test_guards.py::test_hitl_gate`), not assumed.
+"Agent proposes, human disposes." That property is tested (`tests/test_frame.py::test_action_tool_needs_approval`, D-004), not assumed.
