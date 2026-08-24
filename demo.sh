@@ -33,6 +33,7 @@ fi
 [ -f presentation/evals.html ] || { echo "generating evals.html…"; $PY scripts/build_evals.py >/dev/null 2>&1 || true; }
 [ -f presentation/deploy.html ] || { echo "generating deploy.html…"; $PY scripts/build_deploy.py >/dev/null 2>&1 || true; }
 [ -f presentation/a2a.html ] || { echo "generating a2a.html…"; $PY scripts/build_a2a.py >/dev/null 2>&1 || true; }
+[ -f presentation/signal.html ] || { echo "generating signal.html…"; $PY scripts/build_signal.py >/dev/null 2>&1 || true; }
 
 cat <<EOF
 ──────────────────────────────────────────────────────────────────────

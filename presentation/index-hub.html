@@ -34,11 +34,7 @@
 <body>
 <main>
   <h1>FDE Agent — demo hub</h1>
-  <div class="sub">A governed, observable, deployable LangGraph agent. Six stops, all live when the server runs.</div>
-
-  <div class="ph">PLACEHOLDER hub scaffold. Links already point at the SERVED routes (step 3 baked in).
-    Replace with the handed-in <code>presentation/index-hub.html</code>; the <code>/hub</code> route serves
-    whatever is at that path.</div>
+  <div class="sub">A governed, observable, deployable LangGraph agent. Eleven stops, all live when the server runs.</div>
 
   <div class="thesis"><b>Thesis:</b> the model reasons freely; authorization, tenant isolation,
     approval-binding, and PII redaction are enforced <b>outside</b> the model in deterministic code — each a
@@ -83,6 +79,10 @@
   <a class="stop" href="/a2a"><span class="n">10</span>
     <span><span class="t">Agent → Agent — governance composes</span><br><span class="d">Governance composes — even agent-initiated actions hit the human gate, and I don't expose the governed graph over MCP because the approval channel can't survive stdio.</span></span>
     <span class="route">/a2a</span></a>
+
+  <a class="stop" href="/signal"><span class="n">11</span>
+    <span><span class="t">Signal — data → recommendations</span><br><span class="d">I read the eval and telemetry data and turn it into engineering recommendations — where the cost is, where the detector over-fires, where the retrieval lever is.</span></span>
+    <span class="route">/signal</span></a>
 
   <div class="demostrip">
     <div class="ds-label">A2A demo — terminal 2 (agent-initiated, interrupt propagates to the console channel):</div>
