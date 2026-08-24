@@ -6,9 +6,13 @@ Streams up to SCAN_ROW_CAP rows (bounded), so it stays memory-safe on huge files
 examples are PII-redacted. findings.json rows: {finding, severity, column, count, examples, confidence}.
 """
 from __future__ import annotations
-import csv, json, os, re
 
-from .profile import detect, _iter_json_objects
+import csv
+import json
+import os
+import re
+
+from .profile import _iter_json_objects, detect
 
 SCAN_ROW_CAP = 500_000
 EX = 3
@@ -52,10 +56,10 @@ def _rows(path):
 
 def scan(path: str) -> dict:
     _PII, injection_score, redact_pii = _detectors()
-    pii = {}          # (label, column) -> {count, examples}
-    inj = {}          # column -> {count, examples}
+    pii: dict = {}          # (label, column) -> {count, examples}
+    inj: dict = {}          # column -> {count, examples}
     name_cols = set()
-    tenant_vals = {}  # column -> set of distinct values (capped)
+    tenant_vals: dict = {}  # column -> set of distinct values (capped)
     scanned = 0; truncated = False
 
     for row in _rows(path):

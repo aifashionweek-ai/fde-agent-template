@@ -8,6 +8,7 @@ can replay the tools node, so every executed hash is recorded and a repeat is an
 effect happens exactly once. Read tools carry no side effect, so they need no binding.
 """
 from __future__ import annotations
+
 import hashlib
 import json
 

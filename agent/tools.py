@@ -10,8 +10,12 @@ Tools return JSON; retrieval ids are the only legal citations.
 # How-to: edit the tool table in MASTERSCHEMA.md, implement the @tool fn (name must match the row),
 #         then run `python update.py` to regenerate tool_registry.json + drift-check. Never hand-edit it.
 """
+import json
+import os
+import pathlib
+
 from langchain_core.tools import tool
-import json, os, pathlib
+
 REGISTRY = {t["name"]: t for t in json.loads((pathlib.Path(__file__).parent / "tool_registry.json").read_text())}
 
 
@@ -21,8 +25,8 @@ def search_kb(query: str) -> str:
     """Search the knowledge base for relevant passages. Read-only. Returns chunk ids you MUST cite.
     Scoped to the caller's tenant and clearance automatically.
     # SLOT 3: replace with domain read tools — keep the tenant/clearance scoping."""
-    from .retrieval import INDEX, seed_demo
     from .identity import principal_from_env
+    from .retrieval import INDEX, seed_demo
     if not INDEX.chunks: seed_demo()
     p = principal_from_env()
     groups = set(p.groups) or None                          # D-033: retrieval filtered by the caller's groups
@@ -38,8 +42,8 @@ def submit_action(target: str, detail: str) -> str:
     approval (HITL). Authorized deterministically FIRST (D-033/D-045): a caller may act only on their OWN
     target unless they hold an admin role.
     # SLOT 3: replace with domain action tools — KEEP the authorize()-before-acting + approval pattern."""
-    from .identity import principal_from_env
     from .authz import authorize
+    from .identity import principal_from_env
     p = principal_from_env()
     d = authorize(p, "submit_action", {"tenant": p.tenant_id, "subject": target})
     if not d.allow:

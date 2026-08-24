@@ -1,0 +1,6 @@
+# Dev / code-quality tooling (not needed at runtime). Install:  pip install -r requirements-dev.txt
+# Config lives in pyproject.toml; `make lint` runs ruff + mypy; `.pre-commit-config.yaml` runs ruff on commit.
+ruff==0.16.4
+black==26.5.1        # present for anyone who wants it; NOT enforced (skeleton uses a compact style)
+mypy==2.3.1
+pre-commit>=3.7

@@ -1,9 +1,15 @@
 """FastAPI surface. Local: uvicorn api.main:app --reload. AWS: Lambda via Mangum (deploy/template.yaml) or App Runner (deploy/Dockerfile)."""
-import json, os, pathlib, traceback, uuid
+import json
+import os
+import pathlib
+import traceback
+import uuid
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
-from pydantic import BaseModel
 from langgraph.types import Command
+from pydantic import BaseModel
+
 from agent.graph import graph, run
 from agent.state import AgentOutput
 
@@ -12,7 +18,9 @@ app = FastAPI(title="FDE Agent")
 # Secrets Manager → env at cold start (Lambda); keeps keys out of templates and CI.
 if os.getenv("ANTHROPIC_SECRET_ARN") and not os.getenv("ANTHROPIC_API_KEY"):
     try:
-        import boto3, json as _j
+        import json as _j
+
+        import boto3
         v = boto3.client("secretsmanager").get_secret_value(SecretId=os.environ["ANTHROPIC_SECRET_ARN"])["SecretString"]
         os.environ["ANTHROPIC_API_KEY"] = _j.loads(v).get("ANTHROPIC_API_KEY", v) if v.startswith("{") else v
     except Exception as e: print("secret load failed:", e)

@@ -5,15 +5,20 @@ and DATA-REPORT.html. One command, unknown file → report + clean data.
   python -m tools.data_triage <file> --clean               # + default clean recipe
   python -m tools.data_triage <file> --clean dedup,redact_pii --out cleaned.csv
 """
-import argparse, json, os, pathlib, sys
+import argparse
+import json
+import os
+import pathlib
+import sys
 
 # allow running as `python -m tools.data_triage` from repo root (so `agent.guards` reuse resolves)
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
+from tools.data_triage.clean import DEFAULT_RECIPE
+from tools.data_triage.clean import run as clean_run
 from tools.data_triage.profile import profile
-from tools.data_triage.scan import scan
-from tools.data_triage.clean import run as clean_run, DEFAULT_RECIPE
 from tools.data_triage.report import render
+from tools.data_triage.scan import scan
 
 
 def main(argv=None):

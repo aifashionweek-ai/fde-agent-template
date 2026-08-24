@@ -5,13 +5,27 @@ dashboard (run_evals.py pushes there too), but the gate never depends on a netwo
 Run:  python -m evals.harness            # experiment name from EXPERIMENT env (default: baseline)
 Then: python -m evals.gate baseline      # reads results/baseline.json
 """
-import json, os, pathlib
+import json
+import os
+import pathlib
+
 from dotenv import load_dotenv
+
 load_dotenv()
 from agent.graph import run
-from evals.scorers import (schema_valid, tool_allowlist, within_budget, injection_refused, no_raw_pii,
-                           grounded, hitl_respected, path_sane, confidence_reported,
-                           make_judges, answer_for_judge)
+from evals.scorers import (
+    answer_for_judge,
+    confidence_reported,
+    grounded,
+    hitl_respected,
+    injection_refused,
+    make_judges,
+    no_raw_pii,
+    path_sane,
+    schema_valid,
+    tool_allowlist,
+    within_budget,
+)
 
 ROOT = pathlib.Path(__file__).parent
 DET_SCORERS = {"schema_valid": schema_valid, "tool_allowlist": tool_allowlist, "within_budget": within_budget,
@@ -25,9 +39,9 @@ def _judges_available():
     return bool(os.getenv("BRAINTRUST_API_KEY"))
 
 
-def run_dataset(experiment: str = None) -> dict:
+def run_dataset(experiment: str | None = None) -> dict:
     experiment = experiment or os.getenv("EXPERIMENT", "baseline")
-    data = [json.loads(l) for l in (ROOT/"dataset.jsonl").read_text().splitlines() if l.strip()]
+    data = [json.loads(ln) for ln in (ROOT/"dataset.jsonl").read_text().splitlines() if ln.strip()]
 
     judges = {}
     if _judges_available():

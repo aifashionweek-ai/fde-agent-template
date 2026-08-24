@@ -7,10 +7,10 @@ SCORERS maps a dataset `layer` to its scorer. Reuses the SAME control code the g
 here means a real regression, not a test artifact."""
 from __future__ import annotations
 
+from agent.approval import approve_calls, classify_execution, proposal_hash
 from agent.authz import authorize
+from agent.guards import GuardError, injection_score, input_guard
 from agent.identity import Principal
-from agent.guards import input_guard, injection_score, GuardError
-from agent.approval import approve_calls, proposal_hash, classify_execution
 from agent.retrieval import InMemoryIndex, chunk_document
 from agent.tools import tool_needs_approval
 
@@ -35,7 +35,7 @@ def score_guard_input(row: dict) -> dict:
     try:
         input_guard(row["input"])
         actual = "passed"
-    except GuardError as e:
+    except GuardError:
         actual = "refused"
     return _ok(row["expected_control_outcome"], actual)
 

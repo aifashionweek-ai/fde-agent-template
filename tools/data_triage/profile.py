@@ -5,7 +5,11 @@ is inferred or fabricated (J-02). parquet/xlsx need optional readers (pyarrow/op
 are reported honestly, never faked.
 """
 from __future__ import annotations
-import csv, json, os, re
+
+import csv
+import json
+import os
+import re
 from collections import Counter
 
 SAMPLE_BYTES = 65536
@@ -20,7 +24,7 @@ _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?")
 _BOOL = {"true", "false", "yes", "no", "t", "f", "0", "1"}
 
 
-def _human(n: int) -> str:
+def _human(n: float) -> str:
     for u in ("B", "KB", "MB", "GB", "TB"):
         if n < 1024: return f"{n:.1f}{u}" if u != "B" else f"{n}B"
         n /= 1024

@@ -7,8 +7,12 @@ fetch. The gate runs offline in CI; Braintrust is the dashboard, this file is th
 Exit 1 if: any deterministic scorer < 1.0, any judged scorer below threshold, a slice regresses
 > 0.05 vs baseline, calibration ECE > 0.15, judge agreement < 0.80, or fewer rows than the dataset.
 """
-import json, os, re, sys, pathlib
-from evals.scorers import calibration_error, agreement
+import json
+import pathlib
+import re
+import sys
+
+from evals.scorers import agreement, calibration_error
 
 ROOT = pathlib.Path(__file__).parent.parent
 RESULTS = pathlib.Path(__file__).parent/"results"
@@ -29,7 +33,8 @@ def load(experiment: str) -> dict:
 
 def summarize(payload: dict):
     rows = payload["rows"]
-    by_slice, conf_pairs, j1, j2 = {}, [], [], []
+    by_slice: dict = {}
+    conf_pairs, j1, j2 = [], [], []
     for r in rows:
         sl, sc, out = r["slice"], r.get("scores") or {}, r.get("output") or {}
         by_slice.setdefault(sl, []).append(sc)
@@ -51,7 +56,7 @@ def main():
     agg, ece, agr = summarize(payload)
     fails = []
 
-    expected_rows = len([l for l in (ROOT/"evals"/"dataset.jsonl").read_text().splitlines() if l.strip()])
+    expected_rows = len([ln for ln in (ROOT/"evals"/"dataset.jsonl").read_text().splitlines() if ln.strip()])
     if payload["n"] < expected_rows:
         fails.append(f"only {payload['n']} rows scored, dataset has {expected_rows}")
 
@@ -59,7 +64,7 @@ def main():
     overall = {k: sum(a[k] for a in agg.values() if k in a) / max(1, sum(1 for a in agg.values() if k in a))
                for k in allkeys}
     judged = set(payload.get("judges", []))
-    for name, (kind, op, t) in THRESH.items():
+    for name, (kind, _op, t) in THRESH.items():
         k = JUDGE_ALIASES.get(name, name)
         if kind == "deterministic" and k in overall and overall[k] < 1.0:
             fails.append(f"{k}={overall[k]:.2f} < 1.00")

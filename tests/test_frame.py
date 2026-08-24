@@ -9,8 +9,15 @@ from fastapi.testclient import TestClient
 
 import agent.graph as g
 from agent import telemetry
-from agent.guards import input_guard, budget_guard, output_guard, GuardError, MAX_STEPS, MAX_TOOL_CALLS
 from agent.authz import authorize
+from agent.guards import (
+    MAX_STEPS,
+    MAX_TOOL_CALLS,
+    GuardError,
+    budget_guard,
+    input_guard,
+    output_guard,
+)
 from agent.identity import Principal
 from agent.state import AgentOutput
 from agent.tools import tool_needs_approval

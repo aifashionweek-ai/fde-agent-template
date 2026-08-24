@@ -4,6 +4,7 @@ SELF-CONTAINED — no external asset links). Every number is read from the JSONs
 Three-act shape: what the data IS · what's WRONG · trust-boundary findings · what I DID · what's still RISKY.
 """
 from __future__ import annotations
+
 import html
 
 _CSS = """
@@ -63,7 +64,6 @@ def render(profile: dict, findings: dict, clean_log: dict | None = None) -> str:
     # --- act 2: what's WRONG (ranked) ---
     issues = []
     if reader_ok:
-        rows = p.get("rows") or 0
         for c in p.get("columns", []):
             if c["null_pct"] >= 20: issues.append((c["null_pct"], f'column <b>{_e(c["name"])}</b> is {c["null_pct"]}% null'))
         if p.get("duplicate_rows"):

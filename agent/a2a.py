@@ -10,13 +10,14 @@ an explicit policy — and relay that decision, echoing the hashes the channel S
 never an emergent caller behavior.
 
 This is deliberately NOT an MCP exposure of the governed graph: over MCP stdio there is no approval
-channel — the graph would hang on the interrupt or force auto-approve (J-07 anti-pattern, docs/13).
+channel — the graph would hang on the interrupt or force auto-approve (J-07 anti-pattern).
 Read-only tools stay on MCP; the governed path stays on HTTP where approval can round-trip.
 
 Trust boundary (D-033): in production /approve sits behind the authenticated gateway — only principals
 with an approver role reach it. This module demonstrates the propagation pattern inside that boundary.
 """
 from __future__ import annotations
+
 import json
 import uuid
 from dataclasses import dataclass, field

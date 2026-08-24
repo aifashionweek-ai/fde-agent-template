@@ -1,8 +1,10 @@
 """D-008: one function, provider-agnostic. Selection logic lives in agent/models.py (D-009)."""
 import os
-from .models import select_model, REGISTRY
 
-def get_llm(temperature: float = 0.0, task_class: str = "reasoning"):
+from .models import REGISTRY, TaskClass, select_model
+
+
+def get_llm(temperature: float = 0.0, task_class: TaskClass = "reasoning"):
     # Back-compat: LLM_PROVIDER still works (maps to the first profile of that provider).
     p = os.getenv("LLM_PROVIDER")
     if p and not os.getenv("MODEL_PROFILE"):

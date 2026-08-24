@@ -5,8 +5,8 @@ Each scorer(row) -> {"score": float, "detail": str}. THRESHOLDS[layer] is the me
 enforces. Reuses the same retrieval + grounding code the graph uses."""
 from __future__ import annotations
 
+from agent.guards import GuardError, output_guard
 from agent.retrieval import InMemoryIndex, chunk_document
-from agent.guards import output_guard, GuardError
 
 THRESHOLDS = {
     "retrieval_quality": 0.70,     # mean recall@k — did routing surface the relevant docs in the top-k

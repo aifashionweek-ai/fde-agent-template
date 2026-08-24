@@ -1,6 +1,6 @@
 """D-010/D-011 frame guards: retrieval carries provenance and is ROUTED (tenant isolation + sensitivity
 ceiling) BEFORE scoring. Generic corpus (agent.retrieval.seed_demo) — domain-independent."""
-from agent.retrieval import InMemoryIndex, chunk_document, seed_demo, INDEX
+from agent.retrieval import INDEX, InMemoryIndex, chunk_document, seed_demo
 
 
 def _idx():

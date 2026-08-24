@@ -19,9 +19,10 @@ a decision needs the agent's approval node and a human, which an external MCP cl
 never leave the governed graph. Boundary tested in tests/test_mcp.py (D-025).
 """
 from __future__ import annotations
-import json, pathlib
 
-from agent.tools import TOOLS, REGISTRY
+import json
+
+from agent.tools import REGISTRY, TOOLS
 
 
 def read_tools():
@@ -90,4 +91,4 @@ if __name__ == "__main__":
         except ImportError:
             print("mcp not installed. `pip install \"mcp[cli]\"` to serve, "
                   "or run `python -m agent.mcp_server --manifest` to see what would be published.")
-            raise SystemExit(1)
+            raise SystemExit(1) from None

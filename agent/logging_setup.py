@@ -1,5 +1,8 @@
 """Structured logging (J-12): read the log, don't theorize. structlog if available, stdlib fallback."""
-import logging, os, sys
+import logging
+import os
+import sys
+
 try:
     import structlog
     _HAS = True

@@ -1,21 +1,31 @@
 """LangGraph agent: guard_input -> plan -> act (ReAct loop w/ tools) -> [approval] -> finalize (schema-validated)."""
-import json, os
-from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
-from langgraph.graph import StateGraph, START, END
-from langgraph.prebuilt import ToolNode
-_tool_node = None
+import json
+import os
+
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, StateGraph
+from langgraph.prebuilt import ToolNode
 from langgraph.types import interrupt
-from .state import AgentState
-from .llm import get_llm
-from .tools import TOOLS, tool_needs_approval
+
 from .approval import approve_calls, classify_execution
-from .guards import input_guard, budget_guard, output_guard, extract_retrieved_ids, redact_pii, GuardError
-from .tracing import tag_run, node_span
-from .prompts import SYSTEM, PLANNER
-from .memory import recall_context, STORE
+from .guards import (
+    GuardError,
+    budget_guard,
+    extract_retrieved_ids,
+    input_guard,
+    output_guard,
+    redact_pii,
+)
+from .llm import get_llm
+from .memory import recall_context
+from .prompts import PLANNER, SYSTEM
+from .state import AgentState
+from .tools import TOOLS, tool_needs_approval
+from .tracing import node_span, tag_run
 
 _llm = None
+_tool_node = None
 def llm():
     global _llm
     if _llm is None: _llm = get_llm()

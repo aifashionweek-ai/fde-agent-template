@@ -1,0 +1,12 @@
+# Pre-commit hooks for the FDE Agent skeleton.  Install once:  pre-commit install
+#
+# Runs ruff (lint, with safe autofixes) on every commit. black is intentionally NOT wired here: the
+# skeleton is hand-written in a compact style (one-line guards, semicolons) that black would rewrite;
+# ruff is configured in pyproject.toml to respect that style and flag only real bugs. Run `make lint`
+# for the full bar (ruff + mypy). To also format with black, run `black .` manually.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.4
+    hooks:
+      - id: ruff
+        args: [--fix]

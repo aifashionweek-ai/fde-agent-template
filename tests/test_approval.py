@@ -1,7 +1,7 @@
 """D-034 guard: approval binds to the EXACT proposed action (proposal_hash), and an approved action
 executes at most once. Catch-proof: approve submit_action(alice) then submit submit_action(bob) with that
 approval → REFUSED; replaying an approved action executes once then idempotently skips."""
-from agent.approval import proposal_hash, approve_calls, classify_execution
+from agent.approval import approve_calls, classify_execution, proposal_hash
 
 ACTION = {"submit_action"}      # the skeleton's one example action tool; a domain adds its own
 def needs_approval(name): return name in ACTION

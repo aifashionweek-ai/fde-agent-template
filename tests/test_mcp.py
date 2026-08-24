@@ -3,7 +3,7 @@ governed graph (J-07). Generic invariant, asserted against the skeleton's two ex
 search_kb (read) is published; submit_action (side effect, approval-gated) is withheld. Catch-proof:
 if an action tool were ever classified as read-only, or a read tool marked side-effecting, these fail.
 Domain fills add their own read/action tools; this boundary test keeps holding by construction."""
-from agent.mcp_server import read_tools, action_tool_names, build_server
+from agent.mcp_server import action_tool_names, read_tools
 from agent.tools import REGISTRY
 
 READ_TOOLS = {"search_kb"}          # side_effect: no, approval: no
@@ -34,6 +34,8 @@ def test_action_tools_are_withheld_by_name():
 
 def test_import_does_not_require_mcp():
     # Importing the module and enumerating tools must work with `mcp` uninstalled (optional dep).
-    import importlib, agent.mcp_server as m
+    import importlib
+
+    import agent.mcp_server as m
     importlib.reload(m)
     assert callable(m.build_server) and m.read_tools()

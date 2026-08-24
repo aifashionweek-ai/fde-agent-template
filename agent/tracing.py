@@ -6,7 +6,10 @@ What we add on top of the default LangGraph→LangSmith integration:
   * a helper to turn a trace into an eval row (closing the loop: prod trace → golden set)
 Env: LANGSMITH_TRACING=true LANGSMITH_API_KEY=… LANGSMITH_PROJECT=fde-agent
 """
-import os, functools, subprocess
+import functools
+import os
+import subprocess
+
 
 def _sha() -> str:
     try: return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()

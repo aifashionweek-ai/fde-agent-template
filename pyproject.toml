@@ -1,0 +1,63 @@
+# Code-quality config for the FDE Agent skeleton.
+# Tuned to be sensible, not maximal: it passes clean on the skeleton as-is and catches real bugs,
+# not style opinions. Reviewers/linters see green on first look; a domain fill inherits the same bar.
+
+# black config is present (line-length 100) for anyone who wants to run it, but it is NOT enforced
+# (not in `make lint`, not in pre-commit): the skeleton is hand-written in a deliberate COMPACT style
+# (one-line guards, semicolon-joined statements, packed imports) and black would rewrite ~all of it.
+# ruff below is tuned to respect that style and flag only real bugs.
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# snippets/ are illustrative paste-and-adapt TEMPLATES (placeholder names, lambdas, deliberate shapes) —
+# not app code, not imported, not gated. Don't lint them.
+extend-exclude = ["snippets"]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes (real bugs: unused imports/names), I import-order, B bugbear (likely bugs),
+# UP pyupgrade (modern syntax). Deliberately NOT the pedantic families (D docstrings, ANN annotations).
+select = ["E", "W", "F", "I", "B", "UP"]
+# Ignored on purpose:
+#   E501 line length      — long lines are fine; black would reflow, we don't run it.
+#   E701/E702/E703/E401   — the skeleton's deliberate compact style (one-line ifs, semicolons, packed
+#                           imports). These are voice, not bugs. A domain fill may keep or drop the style.
+ignore = ["E501", "E701", "E702", "E703", "E401"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests: bare asserts (B011) and intentionally-broad pytest.raises(Exception) (B017) are normal in guard tests.
+"tests/*" = ["B011", "B017"]
+# These deliberately import AFTER a statement (load_dotenv() must run before agent.graph imports read env);
+# E402 is a false positive on that intentional load-order, not a bug.
+"evals/harness.py" = ["E402"]
+"evals/run_evals.py" = ["E402"]
+
+[tool.mypy]
+# No python_version pin: mypy uses the interpreter it runs under. (ruff/black target py311 for OUR syntax;
+# mypy just needs to parse installed third-party stubs — some of which use 3.12+ `type` syntax — so pinning
+# it to 3.11 would make mypy choke on THEIR stubs, not our code.)
+ignore_missing_imports = true      # third-party libs (langgraph, structlog, mcp…) ship partial/no stubs
+explicit_package_bases = true      # repo root is the base — evals.scorers resolves once, not as bare `scorers`
+namespace_packages = true
+# Basic, not strict: catch real type bugs (bad returns, wrong arg types), don't demand full annotation.
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+check_untyped_defs = false
+exclude = "(^|/)(\\.venv|deploy|scripts)/"
+
+# agent/models.py builds three LLM SDK clients (ChatAnthropic, ChatBedrockConverse, HuggingFaceEndpoint)
+# from config dicts; their constructor signatures vary by installed langchain version. That friction is
+# SDK-shape, not our logic — relax the shape codes here (the selection LOGIC is still checked elsewhere).
+[[tool.mypy.overrides]]
+module = ["agent.models"]
+disable_error_code = ["call-arg", "arg-type", "assignment"]
+
+# evals/run_evals.py is the legacy Braintrust push path; Eval()'s data/scores accept our callable/list
+# shapes at runtime but are typed with very narrow generics upstream.
+[[tool.mypy.overrides]]
+module = ["evals.run_evals"]
+disable_error_code = ["arg-type"]

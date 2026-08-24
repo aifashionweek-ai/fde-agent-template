@@ -3,7 +3,12 @@ Usage: python update.py [--check] [--evals <experiment>]
   --check : drift checks + pytest (catch-proven guards)
   --evals : additionally run evals/gate.py against a Braintrust experiment (D-014)
 """
-import re, subprocess, sys, json, pathlib
+import json
+import pathlib
+import re
+import subprocess
+import sys
+
 ROOT = pathlib.Path(__file__).parent
 
 def parse_manifest():
@@ -32,8 +37,6 @@ def main():
     print(f"[update] wrote {reg} ({len(tools)} tools)")
     print(f"[update] MANIFEST rows: {len(manifest)}; open: {[r['id'] for r in manifest if '⬜' in r['status']]}")
     # Drift checks: every tool in code is in MASTERSCHEMA, every D-row has a guard path that exists.
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("t", ROOT/"agent"/"tools.py"); 
     names_in_schema = {t["name"] for t in tools}
     code = (ROOT/"agent"/"tools.py").read_text()
     decl = set(re.findall(r"^def (\w+)\(", code, re.M)) - {"tool_needs_approval"}
@@ -48,7 +51,7 @@ def main():
         print(f"[update] DRIFT: parsed {len(tools)} registry rows but code declares {n_code} @tool fns.")
         print(f"         code tools: {sorted(decl)}")
         print(f"         parsed:     {sorted(names_in_schema)}")
-        print(f"         A MASTERSCHEMA tool-table row failed to parse. Check for trailing spaces / unicode dashes / 'yes' vs digits.")
+        print("         A MASTERSCHEMA tool-table row failed to parse. Check for trailing spaces / unicode dashes / 'yes' vs digits.")
         sys.exit(2)
     for r in manifest:
         g = r["guard"].split("::")[0].split(" ")[0].strip(" ·")

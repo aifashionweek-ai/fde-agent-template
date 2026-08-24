@@ -11,12 +11,14 @@ The invariant scorers reuse the SAME control code the graph uses, so a breach is
 Judge-based quality (answer relevance, plan efficiency) is Braintrust/nightly — see evals/README.md.
 """
 from __future__ import annotations
+
 import json
 import pathlib
 import sys
 
 from evals.scorers.invariant import SCORERS as INVARIANT
-from evals.scorers.quality import SCORERS as QUALITY, THRESHOLDS
+from evals.scorers.quality import SCORERS as QUALITY
+from evals.scorers.quality import THRESHOLDS
 
 ROOT = pathlib.Path(__file__).resolve().parent
 DATASETS = ROOT / "datasets"
@@ -27,11 +29,11 @@ def _load(layer: str) -> list[dict]:
     f = DATASETS / f"{layer}.jsonl"
     if not f.exists():
         return []
-    return [json.loads(l) for l in f.read_text().splitlines() if l.strip()]
+    return [json.loads(ln) for ln in f.read_text().splitlines() if ln.strip()]
 
 
 def run() -> dict:
-    invariant = {}
+    invariant: dict = {}
     for layer, scorer in INVARIANT.items():
         rows = _load(layer)
         # xfail rows are DOCUMENTED residuals (e.g. cross-script confusables, D-042): run + report, never
@@ -58,7 +60,7 @@ def run() -> dict:
 
     xfail = _load("egress")
     total_breaches = sum(v["breaches"] for v in invariant.values())
-    quality_misses = [l for l, v in quality.items() if not v["passed"]]
+    quality_misses = [ln for ln, v in quality.items() if not v["passed"]]
     report = {
         "invariant": invariant,
         "quality": quality,

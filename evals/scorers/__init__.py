@@ -7,8 +7,10 @@ How we earn trust in the judge (docs/05-evals-braintrust.md):
   * gate:       evals/gate.py compares experiment vs baseline with MASTERSCHEMA thresholds; update.py --evals fails the build
 """
 import re
-from agent.state import AgentOutput, ALLOWED_TOOLS
+
 from agent.guards import MAX_TOOL_CALLS
+from agent.state import ALLOWED_TOOLS, AgentOutput
+
 
 def schema_valid(output, **_):
     try: AgentOutput.model_validate({k: v for k, v in (output or {}).items() if k != "trace"}); return 1
@@ -65,7 +67,7 @@ def calibration_error(scores: list[tuple[float, float]], bins: int = 5) -> float
 def agreement(a: list[float], b: list[float], thresh: float = 0.5) -> float:
     """Fraction of rows where two judges agree on pass/fail. < 0.8 means your rubric is ambiguous — fix the rubric, not the model."""
     if not a: return 1.0
-    return round(sum((x >= thresh) == (y >= thresh) for x, y in zip(a, b)) / len(a), 3)
+    return round(sum((x >= thresh) == (y >= thresh) for x, y in zip(a, b, strict=False)) / len(a), 3)
 
 # ---------- LLM judges (correctness-focused; docs/05-evals-braintrust.md) ----------
 # `factual` grades CORRECTNESS vs the reference facts, NOT verbosity. A correct answer that adds helpful

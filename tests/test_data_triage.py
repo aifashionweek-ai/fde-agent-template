@@ -2,12 +2,9 @@
 honestly on absent readers (parquet/xlsx), and measures the committed messy fixture accurately (nulls,
 dupes, mixed types, malformed, PII, an injected-instruction row, tenant mixing); cleaning drops/redacts;
 the report renders REAL counts from the file (nothing hardcoded)."""
-import json
 import pathlib
 
-import pytest
-
-from tools.data_triage import profile, scan, clean, render, DEFAULT_RECIPE
+from tools.data_triage import DEFAULT_RECIPE, clean, profile, render, scan
 
 FIX = pathlib.Path(__file__).resolve().parent.parent / "tools" / "data_triage" / "fixtures" / "messy.csv"
 

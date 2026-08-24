@@ -18,9 +18,15 @@ subject to the same residency/retention/right-to-be-forgotten rules as retrieval
 Writes to long-term memory are gated: the agent proposes, a guard/human can dispose (D-004 pattern).
 """
 from __future__ import annotations
-import json, os, time, hashlib, pathlib, re
-from dataclasses import dataclass, asdict, field
-from typing import Optional, Literal
+
+import hashlib
+import json
+import os
+import pathlib
+import re
+import time
+from dataclasses import asdict, dataclass, field
+from typing import Literal
 
 MemKind = Literal["semantic", "episodic"]
 
@@ -34,7 +40,7 @@ class Memory:
     value: str                    # the remembered content
     created_at: float
     source: str = "agent"         # who wrote it: agent | human | ingestion
-    ttl_days: Optional[int] = None
+    ttl_days: int | None = None
     meta: dict = field(default_factory=dict)
 
     def expired(self, now: float | None = None) -> bool:
@@ -45,7 +51,7 @@ class Memory:
 class MemoryStore:
     """Swappable backend. Default = JSON file. Implement search/put/get/delete against any store."""
     def __init__(self, path: str | None = None):
-        self.path = pathlib.Path(path or os.getenv("MEMORY_PATH", ".local/memory.json"))
+        self.path = pathlib.Path(path or os.getenv("MEMORY_PATH") or ".local/memory.json")
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._items: dict[str, Memory] = {}
         if self.path.exists():

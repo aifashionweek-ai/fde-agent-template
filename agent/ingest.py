@@ -18,11 +18,14 @@ Same interface at any scale: point it at a local folder for the demo, or an obje
 production — the caller and the downstream contract don't change.
 """
 from __future__ import annotations
-import os, pathlib, hashlib
+
+import hashlib
+import os
+import pathlib
 from dataclasses import dataclass, field
 
-from .retrieval import chunk_document, INDEX
 from .logging_setup import log
+from .retrieval import INDEX, chunk_document
 
 # Extensions unstructured's auto partitioner handles; anything else is skipped (counted, logged).
 SUPPORTED = {".pdf", ".docx", ".doc", ".html", ".htm", ".pptx", ".ppt", ".txt", ".md", ".eml", ".rtf", ".odt", ".epub"}
@@ -199,7 +202,8 @@ def ingest_directory(path, *, tenant: str, sensitivity: str = "internal", index=
 
 
 if __name__ == "__main__":
-    import sys, json
+    import json
+    import sys
     d = sys.argv[1] if len(sys.argv) > 1 else "corpus"
     st = ingest_directory(d, tenant=os.getenv("TENANT", "demo"),
                           sensitivity=os.getenv("MAX_SENSITIVITY", "internal"))

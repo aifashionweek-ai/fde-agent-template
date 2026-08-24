@@ -13,11 +13,11 @@ The active run is a ContextVar so concurrent requests don't cross streams. LAST_
 recent serialized trace per thread for GET /trace/{thread_id} and the dashboard.
 """
 from __future__ import annotations
+
 import contextvars
-import json
 import os
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 
 from .guards import redact_pii
 
@@ -160,8 +160,8 @@ def _gate_hashes(state: dict) -> list[str]:
 
 
 def _had_retrieval(run: RunTrace | None) -> bool:
-    return bool(run) and any(t.name in {"search_kb", "recall", "lookup"}
-                             for s in run.spans for t in s.tools)
+    return run is not None and any(t.name in {"search_kb", "recall", "lookup"}
+                                   for s in run.spans for t in s.tools)
 
 
 def _status_for(node_name: str, state: dict, out: dict | None, run: RunTrace | None = None) -> str:
@@ -234,7 +234,7 @@ def _tool_records(state: dict, out: dict | None) -> list[ToolRecord]:
 
 # ---------- serialization ----------
 def serialize(run: RunTrace) -> dict:
-    spans = []
+    spans: list[dict] = []
     for sp in run.spans:
         d = {"layer": sp.layer, "kind": sp.kind, "tokens_in": sp.tokens_in, "tokens_out": sp.tokens_out,
              "latency_ms": sp.latency_ms, "status": sp.status}

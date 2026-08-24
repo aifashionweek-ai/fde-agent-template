@@ -5,9 +5,13 @@ filter_tenant) reduce rows; transforms (normalize/coerce/redact/strip/fill/split
 agent's redact_pii + injection detector (no duplication).
 """
 from __future__ import annotations
-import csv, json, os, re
 
-from .profile import detect, _iter_json_objects, DUP_HASH_CAP
+import csv
+import json
+import os
+import re
+
+from .profile import DUP_HASH_CAP, _iter_json_objects, detect
 
 _WS = re.compile(r"\s+")
 _NUMISH = re.compile(r"^[\s$€£]*[+-]?[\d,]+(\.\d+)?[\s%]*$")
@@ -15,7 +19,7 @@ _TENANT_COL = re.compile(r"tenant|org|company|account|customer|client", re.I)
 
 
 def _agent():
-    from agent.guards import redact_pii, injection_score
+    from agent.guards import injection_score, redact_pii
     return redact_pii, injection_score
 
 
@@ -137,7 +141,7 @@ def _read_rows(path):
                 yield {"line": line.rstrip("\n")}, ["line"], "txt", False
 
 
-def run(path: str, recipe=None, out_path: str = None) -> dict:
+def run(path: str, recipe=None, out_path: str | None = None) -> dict:
     """Apply the recipe streaming; write cleaned output; return the ordered change-log."""
     recipe = recipe or DEFAULT_RECIPE
     steps = [s for s in recipe if s in PRIMS]

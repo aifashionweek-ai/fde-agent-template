@@ -9,10 +9,12 @@ Usage:
     llm = profile.build(temperature=0)
 """
 from __future__ import annotations
+
 import os
 from dataclasses import dataclass, field
+from typing import Literal
+
 from .logging_setup import log
-from typing import Literal, Optional
 
 Provider   = Literal["anthropic", "bedrock", "hf"]
 Weights    = Literal["closed", "open"]
@@ -52,14 +54,14 @@ class ModelProfile:
             elif "qwen" in self.model: kwargs["provider"] = "qwen"
             return ChatBedrockConverse(**kwargs)
         if self.provider == "hf":
-            from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
+            from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
             ep = HuggingFaceEndpoint(endpoint_url=os.getenv("HF_ENDPOINT_URL") or None,
                                      repo_id=None if os.getenv("HF_ENDPOINT_URL") else self.model,
                                      temperature=max(temperature, 0.01), max_new_tokens=max_tokens)
             return ChatHuggingFace(llm=ep)
         raise ValueError(self.provider)
 
-def _bedrock_guardrail() -> Optional[dict]:
+def _bedrock_guardrail() -> dict | None:
     """Attach a Bedrock Guardrail ONLY if explicitly enabled with a real id. A missing/placeholder id
     must never be attached — an invalid guardrailIdentifier 400s the entire Converse call (this bug cost
     a whole bake-off: every open-model tool row failed with 'guardrail identifier is invalid' until the
@@ -109,7 +111,7 @@ REGISTRY: dict[str, ModelProfile] = {p.id: p for p in [
                  license="apache-2.0", notes="permissive license; strong small open model"),
 ]}
 
-def select_model(task_class: TaskClass = "reasoning", residency: Optional[Residency] = None,
+def select_model(task_class: TaskClass = "reasoning", residency: Residency | None = None,
                  max_cost_tier: int = 5, min_quality_tier: int = 1, prefer_open: bool = False) -> ModelProfile:
     """Deterministic selection. Order: hard constraints → prefer_open → quality desc → cost asc → latency asc."""
     residency = residency or os.getenv("DATA_RESIDENCY") or None

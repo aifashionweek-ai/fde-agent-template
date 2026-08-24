@@ -8,8 +8,9 @@ check `iss`, `aud`, and `exp` — before trusting a single claim. Trusting an un
 ballgame; this module assumes that verification happened upstream and only maps claims → Principal.
 """
 from __future__ import annotations
+
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,7 @@ def principal_from_claims(claims: dict) -> Principal:
 def principal_from_env() -> Principal:
     """Demo/eval path: build the Principal from env (USER_ID, TENANT, ROLES, GROUPS as comma lists).
     The same env the tools already read for tenant/user — one source of truth for 'who is calling'."""
-    csv = lambda k: tuple(v for v in os.getenv(k, "").split(",") if v)
+    def csv(k): return tuple(v for v in os.getenv(k, "").split(",") if v)
     return principal_from_claims({
         "user_id": os.getenv("USER_ID", "anon"),
         "tenant_id": os.getenv("TENANT", "demo"),

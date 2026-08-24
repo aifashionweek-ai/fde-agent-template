@@ -1,8 +1,10 @@
-from typing import Annotated, Optional
+import json
+import pathlib
+from typing import Annotated
+
+from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
-from langgraph.graph.message import add_messages
-import json, pathlib
 
 ALLOWED_TOOLS = {t["name"] for t in json.loads((pathlib.Path(__file__).parent/"tool_registry.json").read_text())}
 
@@ -29,11 +31,11 @@ class AgentState(TypedDict, total=False):
     plan: list[str]
     step_count: int
     tool_calls: int
-    result: Optional[dict]
+    result: dict | None
     needs_approval: bool
     errors: list[str]
     path: list[str]              # node sequence, D-013 (trace path)
-    principal: Optional[dict]    # who is calling (identity.Principal.as_claims()); authz uses it, D-033
+    principal: dict | None    # who is calling (identity.Principal.as_claims()); authz uses it, D-033
     memory_ctx: str              # recalled memory for THIS turn; bound into the system msg at call time, never persisted as a message (D-041)
     run_id: str                  # binds approvals to this run (D-034)
     approved: list[str]          # proposal hashes a human approved (D-034)

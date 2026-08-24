@@ -9,7 +9,7 @@
         {
           "attack_class": "homoglyph_cyrillic",
           "xpass": false,
-          "residual": "cross-script confusable (Cyrillic U+0430) \u2014 NFKC folds width/case/whitespace but not script; needs a TR39 skeleton (HARDENING-BACKLOG.md, D-042)"
+          "residual": "cross-script confusable (Cyrillic U+0430) \u2014 NFKC folds width/case/whitespace but not script; needs a TR39 skeleton (D-042)"
         }
       ]
     },
@@ -43,7 +43,7 @@
         {
           "attack_class": "retrieval_borne_privileged_self_approve",
           "xpass": false,
-          "residual": "same cross-script confusable residual as authz/homoglyph_cyrillic (D-042 TR39 skeleton, HARDENING-BACKLOG.md)"
+          "residual": "same cross-script confusable residual as authz/homoglyph_cyrillic (D-042 TR39 skeleton)"
         }
       ]
     }

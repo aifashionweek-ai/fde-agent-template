@@ -12,6 +12,7 @@ Every rule is data-driven and testable in isolation (tests/test_authz.py). Remov
 deny-test fail — that's the catch-proof.
 """
 from __future__ import annotations
+
 import unicodedata
 from dataclasses import dataclass
 
@@ -24,7 +25,7 @@ def _norm(s) -> str:
     deny by writing an id with a trailing space, different case, or a compatibility homoglyph
     (e.g. full-width 'ａlice'). NFKC folds compatibility/width variants, strip drops surrounding
     whitespace, casefold makes it case-insensitive. NOTE: NFKC does NOT map cross-SCRIPT confusables
-    (Cyrillic 'а' U+0430 stays distinct) — that needs a TR39 confusables skeleton (see HARDENING-BACKLOG)."""
+    (Cyrillic 'а' U+0430 stays distinct) — that needs a TR39 confusables skeleton (a documented residual)."""
     return unicodedata.normalize("NFKC", str(s)).strip().casefold()
 
 

@@ -1,6 +1,6 @@
 """Guards = layered safety rails. Each maps to a MANIFEST D-### row and a catch-proven test.
 
-Layer model (docs/04-guardrails.md):
+Layer model:
   L0 deterministic, in-process, always on  — regex PII/injection, budgets, allowlist, schema   (ms, free)
   L1 deterministic, library                — Presidio PII (GUARD_PII=presidio)                  (ms, free)
   L2 model-based classifier                — Llama Prompt Guard / Lakera / your HF classifier   (10s of ms)
@@ -9,7 +9,10 @@ Layer model (docs/04-guardrails.md):
   L5 human                                 — HITL interrupt on side-effect tools                 (D-004)
 Deterministic where I can, model-judged where I must, humans on the residual.
 """
-import os, re, json
+import json
+import os
+import re
+
 from .state import AgentOutput
 
 MAX_STEPS      = int(os.getenv("MAX_STEPS", 12))

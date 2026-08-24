@@ -1,5 +1,9 @@
 """Verify the 4-slot new-engagement mechanism works end-to-end. Run before any real assignment."""
-import subprocess, sys, pathlib, json
+import json
+import pathlib
+import subprocess
+import sys
+
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 ROOT = pathlib.Path(__file__).parent.parent
 
@@ -15,7 +19,7 @@ def main():
         from agent.retrieval import chunk_document
         cs = chunk_document("book-policy","Members may borrow 5 books.",source="policy",tenant="library-a",sensitivity="internal")
         assert cs and cs[0].tenant == "library-a"
-        checks.append(("Slot 2 (corpus ingestion)", True, f"chunk_document works, scoped"))
+        checks.append(("Slot 2 (corpus ingestion)", True, "chunk_document works, scoped"))
     except Exception as e: checks.append(("Slot 2 (corpus ingestion)", False, str(e)))
     try:
         r = subprocess.run([sys.executable,"update.py","--check"],cwd=ROOT,capture_output=True,text=True)

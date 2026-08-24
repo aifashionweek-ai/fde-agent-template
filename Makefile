@@ -1,8 +1,9 @@
-.PHONY: setup check evals evals-braintrust gate run demo demo-all deploy preflight hf smoke bakeoff harness mcp
+.PHONY: setup check lint evals evals-braintrust gate run demo demo-all deploy preflight hf smoke bakeoff harness mcp
 setup:     ; pip install -r requirements.txt && cp -n .env.example .env || true
 demo:      ; bash demo.sh
 demo-all:  ; bash scripts/run_all.sh $(ARGS)
 check:     ; python update.py --check
+lint:      ; ruff check . && mypy agent api evals tools   # style (ruff) + basic type bugs (mypy); black NOT run (compact style)
 evals:     ; python -m evals.runner                 # harness C: invariant gate + quality thresholds (offline)
 evals-braintrust: ; python -m evals.run_evals       # legacy row-per-run golden set → Braintrust
 gate:      ; python -m evals.gate $(EXP) $(BASE)

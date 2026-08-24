@@ -5,7 +5,10 @@ Then: python -m evals.gate <exp> [baseline]
 Two judges (JUDGE_MODEL_A Anthropic, JUDGE_MODEL_B OpenAI) — different vendors, so gate.py's
 judge-agreement number means something. Both need keys registered in Braintrust -> AI providers.
 """
-import os, json, pathlib
+import json
+import os
+import pathlib
+
 from evals.harness import run_dataset
 
 # 1) Local scoring + results file (this is what the gate reads)
@@ -13,13 +16,23 @@ payload = run_dataset()
 
 # 2) Push the same rows to Braintrust for the dashboard (best-effort; the gate doesn't depend on it)
 try:
-    from braintrust import Eval
-    from evals.harness import JUDGE_A, JUDGE_B
     from autoevals import Factuality, LLMClassifier
+    from braintrust import Eval
+
     from agent.graph import run as agent_run
-    from evals.scorers import (schema_valid, tool_allowlist, within_budget, injection_refused, no_raw_pii,
-                               grounded, hitl_respected, path_sane, confidence_reported)
-    DATA = [json.loads(l) for l in (pathlib.Path(__file__).parent/"dataset.jsonl").read_text().splitlines() if l.strip()]
+    from evals.harness import JUDGE_A, JUDGE_B
+    from evals.scorers import (
+        confidence_reported,
+        grounded,
+        hitl_respected,
+        injection_refused,
+        no_raw_pii,
+        path_sane,
+        schema_valid,
+        tool_allowlist,
+        within_budget,
+    )
+    DATA = [json.loads(ln) for ln in (pathlib.Path(__file__).parent/"dataset.jsonl").read_text().splitlines() if ln.strip()]
 
     def task(inp):
         r = agent_run(inp, thread_id=f"eval-{abs(hash(inp))}")
