@@ -136,6 +136,10 @@ def infra(): return _serve_html(_REPO / "presentation" / "infra.html",          
 def evals(): return _serve_html(_REPO / "presentation" / "evals.html",                  # H2A/A2A/discrepancies from real JSON
                                 "python scripts/build_evals.py")
 
+@app.get("/deploy", response_class=HTMLResponse, include_in_schema=False)
+def deploy(): return _serve_html(_REPO / "presentation" / "deploy.html",                # 3-day plan from real gaps
+                                 "python scripts/build_deploy.py")
+
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")
 def contract(): return AgentOutput.model_json_schema()
