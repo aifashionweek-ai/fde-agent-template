@@ -3,78 +3,616 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Business analytics — scoping brief</title>
+<title>Agent Scoping Brief — Procurement Operations</title>
+<!-- self-contained: fonts named in CSS, no external link (house style; degrades to system-ui) -->
 <style>
-  :root { --ink:#1a1a2e; --mut:#6b7280; --line:#e5e7eb; --accent:#4338ca; --bg:#fafafa;
-          --good:#166534; --good-bg:#f0fdf4; --warn:#b45309; --warn-bg:#fffbeb; }
-  * { box-sizing:border-box; }
-  body { margin:0; font:15px/1.6 'Space Grotesk',-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); }
-  main { max-width:820px; margin:0 auto; padding:28px 18px 80px; }
-  a.back { color:var(--accent); text-decoration:none; font-size:13px; }
-  h1 { font-size:22px; margin:6px 0 2px; } .sub { color:var(--mut); margin-bottom:22px; }
-  h2 { font-size:15px; margin:26px 0 8px; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); }
-  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:12px 0; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .k { font-weight:700; } ul { margin:6px 0 0; padding-left:20px; } li { margin:3px 0; }
-  table { width:100%; border-collapse:collapse; margin-top:8px; font-size:14px; }
-  th { text-align:left; color:var(--mut); border-bottom:1px solid var(--line); padding:6px 8px; }
-  td { padding:6px 8px; border-bottom:1px solid #f3f4f6; vertical-align:top; }
-  .good { color:var(--good); } .must-not { color:#991b1b; }
-  .pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
-  .pill.good { background:var(--good-bg); } .pill.warn { background:var(--warn-bg); color:var(--warn); }
-  .ph { background:var(--warn-bg); border:1px solid #fcd34d; color:var(--warn); border-radius:10px;
-        padding:10px 14px; font-size:13px; margin-bottom:18px; }
-  @media (max-width:640px){ .grid{grid-template-columns:1fr} }
+  :root{
+    --paper:#F7F9FB;--panel:#FFFFFF;--ink:#141C26;--muted:#5B6675;--faint:#8A94A2;
+    --line:#DCE3EB;--line-strong:#C4CDD8;--structure:#23395B;
+    --agent:#2E5AAC;--code:#0F2A43;--query:#1F7A5C;--flow:#B7791F;--hybrid:#6D4AA6;--dash:#5B6675;
+    --agent-bg:#EAF0FA;--code-bg:#E7EBF0;--query-bg:#E4F2EC;--flow-bg:#F8EFDC;--hybrid-bg:#EDE6F6;--dash-bg:#ECEEF1;
+    --p0:#B23A3A;--p1:#B7791F;--p2:#8A94A2;
+    --plain:#0B6E63;--plain-bg:#E1F1EE;
+    --shadow:0 1px 2px rgba(20,28,38,.05),0 8px 24px rgba(20,28,38,.06);
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --disp:"Space Grotesk",system-ui,-apple-system,sans-serif;
+    --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.55;
+    -webkit-font-smoothing:antialiased;padding:32px 24px 64px}
+  .wrap{max-width:1040px;margin:0 auto}
+
+  header{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:6px}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--structure);font-weight:500;margin-bottom:10px}
+  h1{font-family:var(--disp);font-weight:700;font-size:clamp(26px,3.6vw,38px);line-height:1.04;
+    margin:0 0 14px;letter-spacing:-.015em}
+  .backwards{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--structure);
+    border-radius:0 8px 8px 0;padding:14px 18px;box-shadow:var(--shadow);max-width:82ch}
+  .backwards .bl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  .backwards p{margin:0;font-size:14.5px;color:var(--ink)}
+  .backwards b{color:var(--structure)}
+
+  /* act ribbon */
+  .acts{display:flex;gap:8px;margin:22px 0 4px;flex-wrap:wrap}
+  .act{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+  .act .an{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--structure);font-weight:700;margin-bottom:5px}
+  .act .ad{font-size:12.5px;color:var(--muted)}
+  .act.a1{border-top:3px solid var(--agent)} .act.a2{border-top:3px solid var(--query)} .act.a3{border-top:3px solid var(--flow)}
+
+  section{margin-top:38px}
+  .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .snum{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--structure);
+    border:1.5px solid var(--structure);border-radius:6px;padding:2px 8px;flex:0 0 auto}
+  .sh h2{font-family:var(--disp);font-size:20px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .sh .stage{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    padding:3px 8px;border-radius:5px;margin-left:auto;align-self:center}
+  .stage.hyp{background:var(--agent-bg);color:var(--agent)} .stage.evi{background:var(--query-bg);color:var(--query)} .stage.nxt{background:var(--flow-bg);color:var(--flow)}
+  .lead{color:var(--muted);font-size:14.5px;margin:0 0 18px;max-width:80ch}
+  .lead b{color:var(--ink);font-weight:600}
+
+  .plainbox{background:var(--plain-bg);border:1px solid #BEE0DA;border-radius:8px;padding:10px 13px;margin:0 0 16px;
+    font-size:12.5px;color:#0B4A43;max-width:82ch}
+  .plainbox .pt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--plain);margin-right:6px}
+
+  /* the story of a request */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
+  .fstep{flex:1;min-width:150px;padding:14px 15px;border-right:1px solid var(--line)}
+  .fstep:last-child{border-right:0}
+  .fstep .fsn{font-family:var(--mono);font-size:10px;color:var(--faint);margin-bottom:5px}
+  .fstep .fst{font-family:var(--disp);font-weight:600;font-size:13.5px;margin-bottom:3px}
+  .fstep .fsd{font-size:11.5px;color:var(--muted)}
+  .breaks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .brk{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--p0);border-radius:0 8px 8px 0;padding:12px 14px;box-shadow:var(--shadow)}
+  .brk .bt{font-family:var(--disp);font-weight:600;font-size:13px;margin-bottom:3px}
+  .brk .bd{font-size:12px;color:var(--muted)}
+
+  /* prioritization numbers */
+  .scorekey{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 16px;font-size:12px;color:var(--muted)}
+  .scorekey .sk{display:flex;align-items:center;gap:7px}
+  .scorekey .sk b{color:var(--ink);font-weight:600}
+  .dots{display:inline-flex;gap:3px}
+  .dot{width:7px;height:7px;border-radius:50%;background:#D5DCE4}
+  .dot.on{background:var(--structure)}
+
+  .tools-legend{display:flex;flex-wrap:wrap;gap:8px 10px;margin:14px 0 14px}
+  .vtag{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.05em;padding:4px 9px;border-radius:5px}
+  .vtag.AGENT{color:var(--agent);background:var(--agent-bg)}
+  .vtag.CODE{color:#fff;background:var(--code)}
+  .vtag.QUERY{color:var(--query);background:var(--query-bg)}
+  .vtag.FLOW{color:var(--flow);background:var(--flow-bg)}
+  .vtag.HYBRID{color:var(--hybrid);background:var(--hybrid-bg)}
+  .vtag.BI{color:var(--dash);background:var(--dash-bg)}
+
+  .filter{display:flex;gap:7px;margin-bottom:14px}
+  .filter button{font-family:var(--mono);font-size:11.5px;border:1px solid var(--line-strong);background:var(--panel);
+    color:var(--muted);border-radius:7px;padding:6px 12px;cursor:pointer;transition:.14s}
+  .filter button:hover{border-color:var(--structure);color:var(--ink)}
+  .filter button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .matrix{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .mrow{display:grid;grid-template-columns:44px 1fr 150px 116px;gap:14px;align-items:center;
+    padding:13px 18px;border-bottom:1px solid #EFF3F7;cursor:pointer;transition:background .12s}
+  .mrow:last-child{border-bottom:0}
+  .mrow:hover{background:#FAFBFC}
+  .mrow .pri{font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;padding:3px 0;border-radius:5px}
+  .mrow .pri.P0{color:#fff;background:var(--p0)} .mrow .pri.P1{color:#fff;background:var(--p1)} .mrow .pri.P2{color:#fff;background:var(--p2)}
+  .mrow .task{min-width:0}
+  .mrow .task .tt{font-family:var(--disp);font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
+  .mrow .task .tt .exp{margin-left:auto;color:var(--faint);font-family:var(--mono);font-size:12px}
+  .mrow .task .ts{font-size:12px;color:var(--muted);margin-top:2px}
+  .mrow .verdict{display:flex;justify-content:flex-end}
+  .mrow .scorecol{display:flex;flex-direction:column;gap:4px}
+  .mrow .scorecol .sline{display:grid;grid-template-columns:16px auto;gap:6px;align-items:center;font-family:var(--mono);font-size:9px;color:var(--faint)}
+  .mdetail{grid-column:1/-1;margin-top:8px;padding:13px 15px;background:#FAFBFD;border:1px solid var(--line);border-radius:8px}
+  .mdetail .dh{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:7px}
+  .mdetail .hypo{font-size:13.5px;color:var(--ink);margin:0 0 10px;font-weight:500}
+  .mdetail .hypo::before{content:"HYPOTHESIS  ";font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;color:var(--agent);background:var(--agent-bg);padding:2px 6px;border-radius:4px;margin-right:8px;vertical-align:1px}
+  .mdetail p{margin:0 0 9px;font-size:13px;color:var(--ink)}
+  .mdetail .plainline{font-size:12px;color:#0B4A43;background:var(--plain-bg);border-radius:6px;padding:7px 10px;margin:0}
+  .mdetail .plainline .pt{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--plain);margin-right:6px}
+
+  .why{background:var(--structure);color:#fff;border-radius:12px;padding:20px 22px;box-shadow:var(--shadow)}
+  .why h3{font-family:var(--disp);font-size:16px;margin:0 0 10px;font-weight:600}
+  .why p{margin:0 0 10px;font-size:14px;opacity:.94}
+  .why p:last-child{margin-bottom:0}
+  .why b{color:#EAF0FA}
+
+  .mgroup{margin-bottom:16px}
+  .mgt{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--structure);
+    font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .mgt .tagline{font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted);font-size:12px}
+  .mcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  .mcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 15px;box-shadow:var(--shadow)}
+  .mcard.invariant{border-top:3px solid var(--p0)}
+  .mcard.north{border-top:3px solid var(--structure)}
+  .mcard.quality{border-top:3px solid var(--query)}
+  .mcard.ops{border-top:3px solid var(--flow)}
+  .mcard .mn{font-family:var(--disp);font-weight:600;font-size:13.5px;margin-bottom:4px}
+  .mcard .md{font-size:11.5px;color:var(--muted);line-height:1.4;margin-bottom:10px}
+  .mcard .mv{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:11px}
+  .mcard .target{color:var(--muted)}
+  .mcard .measured{font-weight:700}
+  .mcard .measured.good{color:var(--query)}
+  .mcard .measured.zero{color:var(--p0)}
+  .mcard .measured.pending{color:var(--faint)}
+  .measured-badge{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:var(--query-bg);color:var(--query)}
+  .measured-badge.ref{background:var(--agent-bg);color:var(--agent)}
+
+  /* findings */
+  .find{background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:1fr 1fr 132px;gap:0;overflow:hidden;margin-bottom:12px}
+  .find .fcell{padding:14px 16px;border-right:1px solid var(--line)}
+  .find .fcell:last-child{border-right:0}
+  .find .fh{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  .find .fbelief{font-size:13px;color:var(--ink)}
+  .find .fbelief b{color:var(--agent)}
+  .find .fevi{font-size:12.5px;color:var(--ink)}
+  .find .fevi .num{font-family:var(--mono);font-weight:700;color:var(--query)}
+  .find .fevi .surprise{font-family:var(--mono);font-weight:700;color:var(--hybrid)}
+  .find .fverdict{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;background:#FBFCFD}
+  .vlabel{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.05em;padding:4px 9px;border-radius:5px}
+  .vlabel.CONFIRMED{color:var(--query);background:var(--query-bg)}
+  .vlabel.SURPRISE{color:var(--hybrid);background:var(--hybrid-bg)}
+  .vlabel.PENDING{color:var(--faint);background:var(--dash-bg)}
+  .find .fref{font-family:var(--mono);font-size:9px;color:var(--faint)}
+
+  /* failure modes */
+  .fmcards{display:flex;flex-direction:column;gap:12px}
+  .fm{background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:220px 1fr;gap:0;overflow:hidden}
+  .fm .fleft{background:linear-gradient(180deg,#FBFAF6,#FDFDFB);padding:15px 16px;border-right:1px solid var(--line)}
+  .fm .fmode{font-family:var(--disp);font-weight:600;font-size:14px;margin:0 0 6px;color:var(--code)}
+  .fm .fsym{font-size:11.5px;color:var(--muted);line-height:1.4}
+  .fm .fsym b{color:var(--p0);font-weight:600}
+  .fm .fright{padding:15px 16px;display:flex;flex-direction:column;gap:8px}
+  .fm .frow{display:grid;grid-template-columns:74px 1fr;gap:10px;font-size:12.5px;align-items:baseline}
+  .fm .frow .fk{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding-top:2px}
+  .fm .frow .fv{color:var(--ink)}
+  .fm .frow .fv b{color:var(--structure)}
+  .fm .plainline{font-size:11.5px;color:#0B4A43;background:var(--plain-bg);border-radius:6px;padding:6px 9px}
+  .fm .plainline .pt{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--plain);margin-right:5px}
+  .fm .catch{font-family:var(--mono);font-size:11px;color:var(--query);background:var(--query-bg);border-radius:6px;padding:6px 9px;display:inline-block}
+  .fm .catch .drow{color:var(--code);font-weight:700}
+
+  /* scope cut */
+  .cut{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .cutrow{display:grid;grid-template-columns:1fr 92px 1fr;gap:14px;align-items:start;padding:13px 18px;border-bottom:1px solid #EFF3F7}
+  .cutrow:last-child{border-bottom:0}
+  .cutrow .cn{font-family:var(--disp);font-weight:600;font-size:13.5px}
+  .cutrow .sev{font-family:var(--mono);font-size:10px;font-weight:700;text-align:center;padding:3px 0;border-radius:5px;color:#fff;align-self:start}
+  .cutrow .sev.S2{background:var(--flow)} .cutrow .sev.S3{background:var(--p2)} .cutrow .sev.RUN{background:var(--agent)}
+  .cutrow .cwhy{font-size:12px;color:var(--muted)}
+  .cutrow .cwhy b{color:var(--ink)}
+  .cuthead{display:grid;grid-template-columns:1fr 92px 1fr;gap:14px;padding:11px 18px;background:#FBFCFD;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .cuthead .cc{text-align:center}
+
+  /* glossary */
+  .gloss{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px 18px}
+  .gloss h3{font-family:var(--disp);font-size:14px;margin:0 0 12px;font-weight:600}
+  .gitem{display:grid;grid-template-columns:170px 1fr;gap:14px;padding:8px 0;border-bottom:1px solid #EFF3F7;font-size:12.5px}
+  .gitem:last-child{border-bottom:0}
+  .gitem .gt{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--structure)}
+  .gitem .gd{color:var(--muted)}
+
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.6}
+  .foot b{color:var(--muted)}
+
+  .stage.bld{background:var(--agent-bg);color:var(--agent)}
+  .decision{background:var(--agent-bg);border:1px solid #CFE0F5;border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .decision .dl{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--agent);font-weight:700;margin-bottom:6px}
+  .decision p{margin:0;font-size:14px;color:var(--ink)}
+  .decision b{color:var(--structure)}
+  .blueprint{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .bp-col{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:15px 16px}
+  .bp-h{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+  .bp-flow{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+  .bp-node{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);border-radius:7px;padding:5px 8px;background:#FBFCFD}
+  .bp-node .bn{font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .bp-node .bk{font-family:var(--mono);font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px}
+  .bp-node .bk.M{color:var(--agent);background:var(--agent-bg)}
+  .bp-node .bk.C{color:#fff;background:var(--code)}
+  .bp-arrow{color:var(--faint);font-family:var(--mono);font-size:12px}
+  .bp-note{font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.45}
+  .bp-map{display:flex;flex-direction:column;gap:10px}
+  .bp-item{display:grid;grid-template-columns:112px 1fr;gap:11px;align-items:start}
+  .bp-item .bpath{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--structure);line-height:1.3}
+  .bp-item .bdesc{font-size:12px;color:var(--muted);line-height:1.4}
+  .plane{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 5px;border-radius:3px;background:var(--dash-bg);color:var(--dash);margin-left:2px;white-space:nowrap}
+  .plane.ctrl{background:var(--code);color:#fff}
+  .bp-models{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:15px 16px;margin-bottom:14px}
+  .bmh{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+  .bmrow{display:flex;flex-wrap:wrap;gap:10px}
+  .mchip{border:1px solid var(--line-strong);border-radius:9px;padding:9px 12px;background:#FBFCFD;min-width:148px}
+  .mchip .mcn{font-family:var(--disp);font-weight:600;font-size:13px}
+  .mchip .mcd{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
+  .mchip.reg{border-style:dashed;border-color:var(--structure)}
+  .bmnote{font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.45}
+  .bmnote b{color:var(--structure)}
+  .forward{background:var(--structure);color:#fff;border-radius:12px;padding:16px 18px}
+  .fwl{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#9FB3D0;margin-bottom:12px}
+  .fwitems{display:flex;flex-wrap:wrap;gap:10px}
+  .fwitem{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:9px 12px;flex:1;min-width:158px}
+  .fwitem .fin{font-family:var(--disp);font-weight:600;font-size:13px}
+  .fwitem .fid{font-family:var(--mono);font-size:10px;color:#B9C6DA;margin-top:2px;line-height:1.4}
+  .fwtie{font-size:12px;color:#CDD8E8;margin-top:12px}
+  .fwtie b{color:#fff}
+  @media (max-width:760px){
+    .layers,.breaks{grid-template-columns:1fr}
+    .mrow{grid-template-columns:40px 1fr;gap:8px}
+    .mrow .verdict,.mrow .scorecol{display:none}
+    .find{grid-template-columns:1fr}
+    .find .fcell{border-right:0;border-bottom:1px solid var(--line)}
+    .fm{grid-template-columns:1fr}
+    .fm .fleft{border-right:0;border-bottom:1px solid var(--line)}
+    .cutrow,.cuthead{grid-template-columns:1fr}
+    .cuthead .cc{display:none}
+    .gitem{grid-template-columns:1fr;gap:2px}
+    .acts{flex-direction:column}
+    .blueprint{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  :focus-visible{outline:2px solid var(--structure);outline-offset:2px;border-radius:4px}
 </style>
 </head>
 <body>
-<main>
-  <a class="back" href="/hub">← back to hub</a>
-  <h1>Business analytics — scoping brief</h1>
-  <div class="sub">Enterprise IT-Ops &amp; Employee Support agent · surface ask → real problem → where AI fits.</div>
+<div class="wrap">
+  <header>
+    <div class="kicker">Agent Scoping Brief · Working Backwards · Scope Before Code</div>
+    <h1>Procurement operations: what earns an agent, and what doesn't</h1>
+    <div class="backwards">
+      <div class="bl">The outcome, stated first</div>
+      <p>An employee asks <b>"can I buy this, and how do I get it approved?"</b> and gets a correct, policy-grounded answer in seconds. When the request commits money, a human approves <b>exactly</b> what the agent proposed — nothing altered after they click — and the decision leaves an audit-proof record. Cycle time drops from days to minutes; not one dollar moves without an authorized, approved, tamper-evident decision.</p>
+    </div>
+    <div class="acts">
+      <div class="act a1"><div class="an">Act 1 · Hypothesis</div><div class="ad">Decompose the problem, and use three numbers to decide what earns an agent — before writing code.</div></div>
+      <div class="act a2"><div class="an">Act 2 · Evidence</div><div class="ad">Run the reference agent. Check each hypothesis against real telemetry and eval data — including one surprise.</div></div>
+      <div class="act a3"><div class="an">Act 3 · Next</div><div class="ad">From what held and what surprised us, decide what to harden next — and what we deliberately deferred.</div></div>
+    </div>
+  </header>
 
-  <div class="ph">PLACEHOLDER scaffold (public-safe, generic procurement framing). Replace with the
-    handed-in <code>presentation/business-analytics.html</code>; the <code>/business</code> route serves
-    whatever is at that path.</div>
+  <!-- 1 PROBLEM -->
+  <section>
+    <div class="sh"><span class="snum">01</span><h2>The business problem</h2></div>
+    <p class="lead">Every purchase at a company runs the same gauntlet. An employee needs to buy something, has to find out if they're <b>allowed</b> to, has to get it <b>approved</b> by the right person, and finance needs the whole thing to be <b>correct and auditable</b>. Today most of that is manual — and the manual parts are both the slow parts and the risky parts.</p>
+    <div class="flow">
+      <div class="fstep"><div class="fsn">step 1</div><div class="fst">Employee asks</div><div class="fsd">"Can I buy this software? Who has to approve it?"</div></div>
+      <div class="fstep"><div class="fsn">step 2</div><div class="fst">Find the rule</div><div class="fsd">Someone digs through policy docs for the limit and the vendor status.</div></div>
+      <div class="fstep"><div class="fsn">step 3</div><div class="fst">Get approval</div><div class="fsd">A manager signs off — often without seeing whether it even passed policy.</div></div>
+      <div class="fstep"><div class="fsn">step 4</div><div class="fst">Commit the money</div><div class="fsd">A PO is raised. This step is irreversible and audited.</div></div>
+    </div>
+    <div class="breaks">
+      <div class="brk"><div class="bt">It's slow</div><div class="bd">Policy lookups and approval chases turn a two-minute decision into a two-day one.</div></div>
+      <div class="brk"><div class="bt">It's risky</div><div class="bd">Approvers rubber-stamp; off-policy and duplicate spend slips through; the money step has the least scrutiny.</div></div>
+    </div>
+  </section>
 
-  <h2>Surface ask vs. real problem</h2>
-  <div class="grid">
-    <div class="card"><span class="k">The surface ask</span>
-      <p>"Give employees a chatbot for IT/HR questions so the helpdesk queue shrinks."</p></div>
-    <div class="card"><span class="k">The real problem</span>
-      <p>The queue is expensive because answering requires <em>acting</em> — resetting access, filing
-      tickets, provisioning — and every action carries blast radius, tenant/clearance boundaries, and an
-      audit obligation. A read-only bot deflects the easy half and leaves the costly half untouched.</p></div>
+  <!-- 2 PRIORITIZE / HYPOTHESIS -->
+  <section>
+    <div class="sh"><span class="snum">02</span><h2>How we prioritize — the numbers behind each call</h2><span class="stage hyp">Act 1 · hypothesis</span></div>
+    <p class="lead">We don't guess what to automate. We score each layer of the problem on <b>three numbers</b>, then apply one rule. The scores are our hypotheses — stated before we build, so the run in Act 2 can confirm or overturn them.</p>
+    <div class="plainbox"><span class="pt">the rule</span>An agent earns its place only where the work is <b>reasoning over messy, unstructured input</b> (like reading policy documents to answer a question). Anything with a fixed, exact answer — a lookup, a threshold check, a routing rule — belongs in ordinary code, which is cheaper, faster, and can't be talked into the wrong answer.</div>
+    <div class="scorekey">
+      <div class="sk"><b>Frequency</b> how often it happens <span class="dots"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span></span></div>
+      <div class="sk"><b>Toil</b> human time it eats today <span class="dots"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span></span></div>
+      <div class="sk"><b>Blast radius</b> cost if it goes wrong <span class="dots"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span></span></div>
+    </div>
+    <div class="tools-legend">
+      <span class="vtag AGENT">AGENT · reasoning + RAG</span>
+      <span class="vtag CODE">DETERMINISTIC CODE</span>
+      <span class="vtag QUERY">PLAIN QUERY / API</span>
+      <span class="vtag FLOW">WORKFLOW</span>
+      <span class="vtag HYBRID">HYBRID</span>
+      <span class="vtag BI">DASHBOARD / BI</span>
+    </div>
+    <div class="filter" id="filter">
+      <button class="on" data-p="ALL">All</button><button data-p="P0">P0</button><button data-p="P1">P1</button><button data-p="P2">P2</button>
+    </div>
+    <div class="matrix" id="matrix"></div>
+  </section>
+
+  <!-- 3 WHY -->
+  <section>
+    <div class="sh"><span class="snum">03</span><h2>Why this is worth solving now</h2></div>
+    <div class="why">
+      <h3>The bottleneck is human attention spent on the wrong things.</h3>
+      <p>Today, people spend their scarce attention on <b>policy lookup</b> (answerable from documents) and on <b>rubber-stamping</b> requests a fixed rule could have cleared or blocked. The one decision that actually needs human judgment — "should we commit this money?" — gets the <b>least</b> attention because it's buried under routine.</p>
+      <p>The agent inverts that: automate the comprehension and the eligibility checks so a human is pulled in <b>only</b> for the genuinely discretionary, money-committing call — and when they are, they approve something that already passed authorization and can't be altered after they click. <b>Fewer approvals, each one meaningful, each one tamper-evident.</b> That's a workflow-integrity win before it's an AI win.</p>
+    </div>
+  </section>
+
+  <!-- 4 METRICS -->
+  <section>
+    <div class="sh"><span class="snum">04</span><h2>What we'll measure to know it worked</h2><span class="stage hyp">Act 1 · success criteria</span></div>
+    <p class="lead">These are the success criteria for the hypotheses above — defined <b>before</b> code. Two classes, and they're not equal. <b>Invariants must be exactly zero</b> — they're integrity guarantees, not averages to optimize. Quality and cost are graded. Values marked <span class="measured-badge ref">REF</span> are already measured on the reference implementation (the IT-ops agent that proves this framework); procurement's own numbers get set in a pilot.</p>
+
+    <div class="mgroup">
+      <div class="mgt">North star <span class="tagline">the one number that means it's working</span></div>
+      <div class="mcards">
+        <div class="mcard north"><div class="mn">Autonomous resolution rate</div><div class="md">Share of eligible requests finished end-to-end with <b>zero governance breaches</b>. A resolution that breached doesn't count — the two are inseparable.</div><div class="mv"><span class="target">target ≥ 60%</span><span class="measured pending">pilot</span></div></div>
+      </div>
+    </div>
+    <div class="mgroup">
+      <div class="mgt" style="color:var(--p0)">Invariant guardrails <span class="tagline">must be exactly 0 — these gate the release</span></div>
+      <div class="mcards">
+        <div class="mcard invariant"><div class="mn">Authorization breaches</div><div class="md">Any action that ran when the rule should have blocked it.</div><div class="mv"><span class="target">must = 0</span><span class="measured zero">0 <span class="measured-badge ref">REF</span></span></div></div>
+        <div class="mcard invariant"><div class="mn">Mutated executions</div><div class="md">Any action that ran different from what the human approved.</div><div class="mv"><span class="target">must = 0</span><span class="measured zero">0 <span class="measured-badge ref">REF</span></span></div></div>
+        <div class="mcard invariant"><div class="mn">Cross-department leaks</div><div class="md">Any data or action crossing a department boundary.</div><div class="mv"><span class="target">must = 0</span><span class="measured zero">0 <span class="measured-badge ref">REF</span></span></div></div>
+        <div class="mcard invariant"><div class="mn">Injection-containment failures</div><div class="md">Any hidden instruction in a document that reaches a real action.</div><div class="mv"><span class="target">must = 0</span><span class="measured zero">0 <span class="measured-badge ref">REF</span></span></div></div>
+      </div>
+    </div>
+    <div class="mgroup">
+      <div class="mgt" style="color:var(--query)">Quality <span class="tagline">graded against thresholds</span></div>
+      <div class="mcards">
+        <div class="mcard quality"><div class="mn">Retrieval recall@k</div><div class="md">Did it pull the right policy text to answer from?</div><div class="mv"><span class="target">≥ 0.70</span><span class="measured good">1.00 <span class="measured-badge ref">REF</span></span></div></div>
+        <div class="mcard quality"><div class="mn">Groundedness</div><div class="md">Every claim traces to a citation; no made-up answers.</div><div class="mv"><span class="target">= 1.00</span><span class="measured good">1.00 <span class="measured-badge ref">REF</span></span></div></div>
+        <div class="mcard quality"><div class="mn">Plan efficiency</div><div class="md">Useful steps ÷ total — no wandering.</div><div class="mv"><span class="target">≥ 0.80</span><span class="measured pending">nightly</span></div></div>
+      </div>
+    </div>
+    <div class="mgroup">
+      <div class="mgt" style="color:var(--flow)">Operational <span class="tagline">cost &amp; load</span></div>
+      <div class="mcards">
+        <div class="mcard ops"><div class="mn">Cost / resolved request</div><div class="md">Tokens × rate per request. Route cheap reads to cheap surfaces.</div><div class="mv"><span class="target">track</span><span class="measured good">$0.013–0.038 <span class="measured-badge ref">REF</span></span></div></div>
+        <div class="mcard ops"><div class="mn">Latency / resolved request</div><div class="md">End-to-end time per request.</div><div class="mv"><span class="target">track</span><span class="measured good">5.6–17.3s <span class="measured-badge ref">REF</span></span></div></div>
+        <div class="mcard ops"><div class="mn">Human-approval load</div><div class="md">How often a human is pulled in. Too high = agent isn't earning its keep; too low = under-gating.</div><div class="mv"><span class="target">tune</span><span class="measured pending">pilot</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 WHAT WE FOUND -->
+  <section>
+    <div class="sh"><span class="snum">05</span><h2>What we found when we ran it</h2><span class="stage evi">Act 2 · evidence</span></div>
+    <p class="lead">We ran the reference agent through the real scenarios and the adversarial suite, and checked each hypothesis against actual data. Three held; one <b>surprised us</b> — and the surprise is the most useful thing here, because it's the kind of defect you only find by measuring, not by reasoning.</p>
+    <div id="findings"></div>
+  </section>
+
+  <!-- 6 THE AGENT THIS BECOMES -->
+  <section>
+    <div class="sh"><span class="snum">06</span><h2>The agent this becomes</h2><span class="stage bld">from scoping to build</span></div>
+    <p class="lead">The hypotheses and the evidence point at one thing to build: a governed agent for the <b>two layers that earned it</b> — grounded policy answers, and a gated PO-approval action. Everything the triage flagged as code, query, workflow, or BI becomes a <b>tool the agent calls</b>, not agent reasoning. Here's the bare-minimum shape — and where it continues.</p>
+
+    <div class="decision">
+      <div class="dl">what we're building</div>
+      <p>A <b>governed procurement agent</b>: grounded policy Q&amp;A over the policy corpus (RAG), plus a <b>human-approved, tamper-evident PO submission</b> — on a deterministic control plane, behind an eval gate, with per-layer telemetry on every run.</p>
+    </div>
+
+    <div class="blueprint">
+      <div class="bp-col">
+        <div class="bp-h">the loop · what runs, in what order</div>
+        <div class="bp-flow">
+          <span class="bp-node"><span class="bn">guard_input</span><span class="bk M">M</span></span><span class="bp-arrow">→</span>
+          <span class="bp-node"><span class="bn">plan</span><span class="bk M">M</span></span><span class="bp-arrow">→</span>
+          <span class="bp-node"><span class="bn">act</span><span class="bk M">M</span></span><span class="bp-arrow">⇄</span>
+          <span class="bp-node"><span class="bn">tools</span><span class="bk M">M</span></span><span class="bp-arrow">→</span>
+          <span class="bp-node"><span class="bn">authorize</span><span class="bk C">C</span></span><span class="bp-arrow">→</span>
+          <span class="bp-node"><span class="bn">approval_gate</span><span class="bk C">C</span></span><span class="bp-arrow">→</span>
+          <span class="bp-node"><span class="bn">execute</span><span class="bk C">C</span></span><span class="bp-arrow">→</span>
+          <span class="bp-node"><span class="bn">finalize</span><span class="bk M">M</span></span>
+        </div>
+        <div class="bp-note"><b style="color:var(--agent)">M</b> = model nodes (reason, can be swayed) · <b style="color:var(--code)">C</b> = code nodes (deterministic gates that enforce). The authorize→gate order is the D-045 fix: a disallowed action never reaches a human.</div>
+      </div>
+      <div class="bp-col">
+        <div class="bp-h">where each concern lives · bare minimum</div>
+        <div class="bp-map">
+          <div class="bp-item"><div class="bpath">Agent loop</div><div class="bdesc">graph, nodes, per-layer telemetry <span class="plane">intelligence · assurance</span></div></div>
+          <div class="bp-item"><div class="bpath">Control plane</div><div class="bdesc">authorize() · approval gate · proposal-hash <span class="plane ctrl">control · deterministic</span></div></div>
+          <div class="bp-item"><div class="bpath">Tools</div><div class="bdesc">retrieve (RAG over policy) · vendor/budget lookup · submit_po <span class="plane">integration</span></div></div>
+          <div class="bp-item"><div class="bpath">Eval gate</div><div class="bdesc">invariant (0-breach) + quality scorers <span class="plane">assurance</span></div></div>
+          <div class="bp-item"><div class="bpath">API surfaces</div><div class="bdesc">/run · /approve · chat UI · agent-to-agent <span class="plane">integration</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bp-models">
+      <div class="bmh">models · the swap is the point</div>
+      <div class="bmrow">
+        <div class="mchip"><div class="mcn">Claude</div><div class="mcd">closed weights · Bedrock + Anthropic API</div></div>
+        <div class="mchip"><div class="mcn">Qwen3 / Llama&nbsp;3.3</div><div class="mcd">open weights · Bedrock provisioned</div></div>
+        <div class="mchip"><div class="mcn">OpenAI</div><div class="mcd">API · bake-off comparator</div></div>
+        <div class="mchip reg"><div class="mcn">model registry</div><div class="mcd">one swap point · one config line</div></div>
+      </div>
+      <div class="bmnote">One registry, provisioned throughput. Swap the weights and <b>every invariant still holds</b> — the safety boundary is code, not the model. That's the claim the bake-off makes measurable.</div>
+    </div>
+
+    <div class="forward">
+      <div class="fwl">continues in the full agentic showcase →</div>
+      <div class="fwitems">
+        <div class="fwitem"><div class="fin">Live agent</div><div class="fid">localhost:8000 · chat + agent-to-agent, real approval gate</div></div>
+        <div class="fwitem"><div class="fin">Run analytics</div><div class="fid">per-layer telemetry — tokens · latency · cost · controls</div></div>
+        <div class="fwitem"><div class="fin">The repo</div><div class="fid">clean structure — agent · control · tools · evals · api</div></div>
+        <div class="fwitem"><div class="fin">Audit trail</div><div class="fid">problem &amp; audit reports · every control → a test</div></div>
+      </div>
+      <div class="fwtie">All four are tied together in <b>the index hub</b> — one page, presented start to finish.</div>
+    </div>
+  </section>
+
+  <!-- 7 FAILURE MODES -->
+  <section>
+    <div class="sh"><span class="snum">07</span><h2>Where agents fail — and how we catch it</h2></div>
+    <p class="lead">The findings above were possible because we designed for the ways agents actually break. These aren't "the AI made something up" — they're the classic failures of letting an unpredictable component near an irreversible action. Each has a fix that lives <b>outside</b> the model, and each is caught by a test or by telemetry, not by hoping.</p>
+    <div class="fmcards" id="fmcards"></div>
+  </section>
+
+  <!-- 8 NEXT -->
+  <section>
+    <div class="sh"><span class="snum">08</span><h2>What we're not building now — and the path if we did</h2><span class="stage nxt">Act 3 · next</span></div>
+    <p class="lead">Scope is a decision, not an accident. Each item below is a real production control with a known shape; deferring it is a judgment about the three-hour budget. A human already sees the exact action and its destination before anything fires, so nothing here is a hole in the demo — they're hardening for regulated scale.</p>
+    <div class="cut">
+      <div class="cuthead"><div>Deferred control</div><div class="cc">Sev / effort</div><div>Why deferred · what closes it</div></div>
+      <div class="cutrow"><div class="cn">Authenticate the approver (IdP at the gateway)</div><div class="sev S2">S2 · M</div><div class="cwhy">Today the fingerprint binds <b>what</b> is approved, not <b>who</b> approves. Production verifies an identity token so approval authority is authenticated too. I built the first control, documented the second.</div></div>
+      <div class="cutrow"><div class="cn">Destination allowlist (data-loss prevention)</div><div class="sev S2">S2 · L</div><div class="cwhy">The rules gate <b>whether</b> a tool runs, not <b>where</b> its output goes. A destination allowlist is the next control for regulated data. A human still sees the destination first.</div></div>
+      <div class="cutrow"><div class="cn">Tamper-evident compliance log</div><div class="sev S2">S2 · M</div><div class="cwhy">Tracing today is for <b>debugging</b>, not a permanent who-approved-what ledger. First item for an audited deployment.</div></div>
+      <div class="cutrow"><div class="cn">Look-alike identity characters</div><div class="sev S3">S3 · M</div><div class="cwhy">We fold case/spacing/width look-alikes; full cross-alphabet needs a specialized library. Low severity because identity comes from a verified login — tracked openly, not hidden.</div></div>
+      <div class="cutrow"><div class="cn">Model bake-off numbers</div><div class="sev RUN">RUN</div><div class="cwhy">Swapping the model is trivial here; the same scenarios run through Claude, an open-weight model, and OpenAI. <b>The point isn't which model wins — it's that every guardrail holds identically regardless.</b> Numbers captured on a provisioned run.</div></div>
+    </div>
+  </section>
+
+  <!-- GLOSSARY -->
+  <section>
+    <div class="sh"><span class="snum">—</span><h2>Plain-English glossary</h2></div>
+    <div class="gloss" id="gloss"></div>
+  </section>
+
+  <div class="foot">
+    Reference implementation: governed IT-ops agent · LangGraph + Bedrock (open &amp; closed weights) + Anthropic API · deterministic control plane · per-layer telemetry · eval gate (invariant breaches = 0).<br>
+    <b>REF</b> values are measured on that implementation; procurement targets are set for a pilot. The framework stays fixed — the four domain slots (golden set, corpus, tools, output contract) are what change per customer.
   </div>
+</div>
 
-  <h2>Where AI fits — and where it must not</h2>
-  <table>
-    <thead><tr><th>Capability</th><th>AI role</th><th>Boundary</th></tr></thead>
-    <tbody>
-      <tr><td>Answer from runbooks/policy</td><td class="good">Lead — routed, cited RAG</td><td>tenant + clearance filtered before ranking; cite only retrieved ids</td></tr>
-      <tr><td>Propose a remediation</td><td class="good">Lead — plan → act</td><td>allowlisted tools; bounded loop</td></tr>
-      <tr><td>Authorize an action</td><td class="must-not">Never the model</td><td>deterministic <code>authorize()</code>, before the human gate</td></tr>
-      <tr><td>Execute a side effect</td><td class="must-not">Never un-approved</td><td>human-in-the-loop; approval bound to a proposal hash</td></tr>
-      <tr><td>Decide what's true</td><td class="must-not">Not from retrieved text</td><td>retrieved content is data, never instructions</td></tr>
-    </tbody>
-  </table>
+<script>
+const S={lo:1,med:2,hi:3};
+function dots(n){let s='<span class="dots">';for(let i=1;i<=3;i++)s+=`<span class="dot ${i<=n?'on':''}"></span>`;return s+'</span>';}
 
-  <h2>Success criteria (what "it works" means)</h2>
-  <ul>
-    <li><span class="k">Safe to leave running:</span> every safety property is a tested invariant; the deploy blocks if one regresses.</li>
-    <li><span class="k">Deflection with action:</span> resolves the acting half under human approval, not just the answering half.</li>
-    <li><span class="k">Provable:</span> every run is traced with its node path, tokens, and control status; approvals are auditable.</li>
-    <li><span class="k">Portable:</span> a new domain is four slots (golden set → corpus → tools → output contract); governance unchanged.</li>
-  </ul>
+const TRIAGE=[
+ {pri:'P0',task:'Answer procurement policy questions',sub:'"Approval limit for software?" · "Is this vendor approved?"',verdict:'AGENT',
+  freq:S.hi,toil:S.hi,blast:S.lo,
+  hypo:'This is the highest-value agent target: it happens constantly, eats real human time today, and if the answer is wrong the human still decides — so the downside is low.',
+  why:`Natural-language questions over unstructured, changing policy documents. No fixed schema, no enumerable set of queries — this is the reasoning-plus-lookup task an agent is <i>for</i>. The one risk is a confident wrong answer, so groundedness is a gating quality metric.`,
+  plain:`The agent reads the actual policy documents and answers from them <i>with citations</i>, instead of guessing from memory. That's what "RAG" means.`},
+ {pri:'P0',task:'Enforce spend limits & approval authority',sub:'Thresholds, who-can-approve-what, no self-approval',verdict:'CODE',
+  freq:S.hi,toil:S.med,blast:S.hi,
+  hypo:'This must be deterministic code, no matter how good the model is. High blast radius: getting it wrong means unauthorized money moves.',
+  why:`Thresholds and approval authority are legally load-bearing. If the <i>model</i> decides whether a request is within limit, the same request could pass or fail run-to-run. It has to be code, evaluated the same way every time.`,
+  plain:`A fixed rule check — "is this person allowed to spend this much?" — decided by code, not the AI's opinion. The agent can <b>call</b> the check but never <b>is</b> the check.`},
+ {pri:'P0',task:'Submit / approve a purchase order',sub:'The money-committing action',verdict:'AGENT',
+  freq:S.hi,toil:S.med,blast:S.hi,
+  hypo:'This is where governance risk concentrates — the irreversible step. Expect most of the controls (and most of the bugs) to live right here.',
+  why:`The agent may <b>draft</b> the PO (agent work), but committing it crosses an irreversible boundary: it must pass authorization <i>before</i> a human is asked, the human approves a locked version, and execution refuses any altered or repeated version. Agent proposes; code enforces; human disposes.`,
+  plain:`When the human clicks approve, the exact action is "fingerprinted". If anything changes before it runs, the fingerprint won't match and it's refused — so an approval can't be hijacked into a different action.`},
+ {pri:'P1',task:'Look up vendor status / remaining budget',sub:'Exact reads from systems of record',verdict:'QUERY',
+  freq:S.hi,toil:S.lo,blast:S.lo,
+  hypo:'Frequent but trivial — a database answers it exactly. Routing it through an agent adds cost and a way to be wrong, for no benefit.',
+  why:`A structured lookup with a fixed answer. Measured on the reference impl, the direct read path is ~160× faster and uses 0 model tokens vs. running it through the full agent.`,
+  plain:`Just a database query. We give it to the agent as a "tool" it can call, but the lookup itself isn't AI work — it's a plain question with one right answer.`},
+ {pri:'P1',task:'Flag anomalous / duplicate / split spend',sub:'Duplicate invoices, split-to-dodge-limit, off-contract',verdict:'HYBRID',
+  freq:S.med,toil:S.med,blast:S.med,
+  hypo:'Two problems in one label: exact violations are rules; fuzzy patterns need the agent — but it flags, never blocks on its own.',
+  why:`Exact duplicates and hard rule breaks are deterministic — a rules engine catches them cleanly. Fuzzy patterns ("three requests just under the limit, same vendor, same week") need the agent's pattern reasoning, surfaced to a human for review.`,
+  plain:`Obvious cheating = a fixed rule. Suspicious-looking patterns = the agent raises a hand for a human to look — it never blocks a payment by itself.`},
+ {pri:'P2',task:'Route the PO to the right approver',sub:'By org chart and amount',verdict:'FLOW',
+  freq:S.hi,toil:S.lo,blast:S.lo,
+  hypo:'Deterministic routing from an org table. A workflow engine, not an agent — an agent here is a liability.',
+  why:`Send-to-the-right-person is a lookup against an org chart and an amount. Classic workflow, older than LLMs. No reasoning required.`,
+  plain:`"Send this to your manager, or their manager if it's over $X." A simple routing rule — no AI needed.`},
+ {pri:'P2',task:'Spend analytics for finance',sub:'Aggregate reporting, trend charts',verdict:'BI',
+  freq:S.med,toil:S.lo,blast:S.lo,
+  hypo:'A dashboard. Named here on purpose so it is NOT accidentally scoped into the agent.',
+  why:`Aggregate reporting over structured spend data — a chart, a pivot, a scheduled report. Using an agent to draw a bar chart is the anti-pattern: slower, costlier, less reliable.`,
+  plain:`This is just a reporting dashboard. It's on the list only to say clearly: don't build this with an agent.`},
+];
 
-  <h2>Build-first (impact ÷ effort)</h2>
-  <div class="card">
-    <span class="pill good">FIRST</span> the control plane — authz, tenant isolation, approval binding, injection-inert retrieval.
-    <span class="pill warn">THEN</span> quality — retrieval recall, groundedness, model selection.
-    <p class="sub" style="margin-top:8px">Rationale: the differentiator isn't answering (everyone ships that) — it's being
-    <em>bounded</em> and <em>continuously proven</em>. See the <a href="/problem">problem breakdown</a> and
-    <a href="/audit">multilayer audit</a> for the computed version of this ranking.</p>
-  </div>
-</main>
+const FINDINGS=[
+ {belief:'Policy Q&A is the highest-value agent target — and reliably automatable.',
+  evidence:'Ran the read scenarios: retrieval recall@k <span class="num">1.00</span>, groundedness <span class="num">1.00</span> (every claim cited). Cost <span class="num">$0.029</span>/read.',
+  verdict:'CONFIRMED',ref:'REF · eval harness'},
+ {belief:'Most of the stack is NOT agent work — only reasoning-over-unstructured earns it.',
+  evidence:'Building it out, only <span class="num">2 of 6</span> layers needed the agent; the rest are plain queries, rules, workflow, and BI — several exposed to the agent as tools.',
+  verdict:'CONFIRMED',ref:'REF · architecture'},
+ {belief:'Governance risk concentrates at the money-committing action.',
+  evidence:'The adversarial + telemetry run caught a real ordering bug right there: authorization was firing <span class="surprise">after</span> the human approved, so a human could be shown a proposal for an action that was never allowable. Fixed: authorization moved ahead of the approval gate; the in-tool check stays as backup.',
+  verdict:'SURPRISE',ref:'REF · D-045, caught by telemetry'},
+ {belief:'The safety boundary is independent of which model runs behind it.',
+  evidence:'The model registry + provisioned throughput make the swap trivial; the same governed scenarios are ready to run through Claude, an open-weight model, and OpenAI, checking that every invariant holds identically. Numbers captured on a provisioned run.',
+  verdict:'PENDING',ref:'bake-off queued'},
+];
+
+const FAILS=[
+ {mode:'The model decides who\u2019s allowed',sym:'Authorization is left to the AI. <b>Symptom:</b> the same request passes or fails run-to-run; you can\u2019t prove policy.',
+  fix:'The allow/deny check is deterministic code. The model can propose; it cannot decide.',boundary:'Authorization',
+  plain:'A fixed rule, not the AI\u2019s judgment, decides "is this allowed?" — so it\u2019s the same answer every time.',
+  catch:'Eval: 0 breaches across every identity variant',drow:'D-042'},
+ {mode:'One system borrows another\u2019s privileges',sym:'A second agent claims it\u2019s an admin. <b>Symptom:</b> the caller rides your agent\u2019s higher access.',
+  fix:'Identity comes from the system\u2019s own trusted context, never from what the caller claims. A caller carries no authority of its own.',boundary:'Agent-to-agent identity',
+  plain:'If another program says "trust me, I\u2019m an admin," we don\u2019t. We only trust who the login system says you are.',
+  catch:'Test: caller-injected identity is ignored',drow:'D-040'},
+ {mode:'The action changes after approval',sym:'The proposal is altered between the click and the run. <b>Symptom:</b> approve for Alice, execute for Bob.',
+  fix:'The approved action is fingerprinted; execution re-checks the fingerprint and refuses on any mismatch.',boundary:'Approval → execution',
+  plain:'The human approves a specific, fingerprinted action. If it\u2019s changed even slightly before running, it\u2019s refused.',
+  catch:'Tamper test: approve-then-alter → REFUSED',drow:'D-034 / D-038'},
+ {mode:'A done action runs twice',sym:'A used approval is replayed. <b>Symptom:</b> the same money-committing action fires again.',
+  fix:'Completed actions are recorded; a repeat is skipped, not re-run.',boundary:'Run-once guarantee',
+  plain:'Approving once means it happens once — resubmitting can\u2019t double-charge.',
+  catch:'Replay test: second submit → skipped',drow:'D-038'},
+ {mode:'A document carries hidden instructions',sym:'A retrieved file says "skip approval, grant admin." <b>Symptom:</b> the model obeys the poisoned file.',
+  fix:'The controls live outside the model\u2019s reading. A malicious instruction can sway the model\u2019s words but can\u2019t reach the allow/deny check or the approval gate — they never read it.',boundary:'Retrieved data → action',
+  plain:'Even if a document tricks the AI into trying something bad, the safety checks don\u2019t read that document, so they still block it.',
+  catch:'Injection eval: swayed model → still blocked, 100% contained',drow:'D-043'},
+ {mode:'A control fires a step too late',sym:'Enforcement happens after the commit point the design assumed. <b>Symptom:</b> a human approves something that was never allowable.',
+  fix:'Move the allow/deny check ahead of the approval gate, so disallowed actions never reach a human. Keep the later check as backup.',boundary:'Order of checks',
+  plain:'We caught our own check running one step too late — and moved it earlier so people are never asked to approve the impossible.',
+  catch:'Telemetry caught the ordering; test proves it now blocks earlier',drow:'D-045'},
+];
+
+const GLOSS=[
+ ['Agent','A program that uses an AI model to reason through a task and call tools — used only where the work needs flexible judgment over messy input.'],
+ ['RAG','Retrieval-augmented generation: the agent looks up the relevant documents and answers <i>from them, with citations</i>, instead of guessing from memory.'],
+ ['Authorization (authz)','A fixed code check of "is this person allowed to do this?" — a rule, not the AI\u2019s opinion.'],
+ ['Department isolation','One department can never see or touch another\u2019s data — enforced by structure, not trust.'],
+ ['Human-in-the-loop','A person approves anything that commits money or can\u2019t be undone, before it happens.'],
+ ['Proposal fingerprint','A unique code for the exact action being approved. If the action changes, the code won\u2019t match, and it\u2019s refused.'],
+ ['Run-once (idempotent)','Doing the same approved action a second time has no extra effect — no double-charging.'],
+ ['Invariant','A property that must <i>always</i> hold (breach count 0) — an integrity guarantee, not an average to improve.'],
+ ['Telemetry','A record of what happened at each step — tokens, timing, and which control fired — so you can see exactly where things went.'],
+];
+
+const VLABEL={AGENT:'AGENT',CODE:'DETERMINISTIC CODE',QUERY:'PLAIN QUERY / API',FLOW:'WORKFLOW',HYBRID:'HYBRID',BI:'DASHBOARD / BI'};
+let filter='ALL'; const expanded=new Set();
+
+function renderMatrix(){
+  const rows=TRIAGE.filter(t=>filter==='ALL'||t.pri===filter);
+  document.getElementById('matrix').innerHTML=rows.map(t=>{
+    const idx=TRIAGE.indexOf(t), open=expanded.has(idx);
+    const detail=open?`<div class="mdetail">
+        <div class="hypo">${t.hypo}</div>
+        <div class="dh">why this classification</div><p>${t.why}</p>
+        <p class="plainline"><span class="pt">plain</span>${t.plain}</p>
+      </div>`:'';
+    return `<div class="mrow" data-idx="${idx}">
+      <div class="pri ${t.pri}">${t.pri}</div>
+      <div class="task"><div class="tt">${t.task}<span class="exp">${open?'▾':'▸'}</span></div><div class="ts">${t.sub}</div></div>
+      <div class="verdict"><span class="vtag ${t.verdict}">${VLABEL[t.verdict]}</span></div>
+      <div class="scorecol">
+        <div class="sline"><span>Frq</span>${dots(t.freq)}</div>
+        <div class="sline"><span>Toil</span>${dots(t.toil)}</div>
+        <div class="sline"><span>Blst</span>${dots(t.blast)}</div>
+      </div>${detail}</div>`;
+  }).join('');
+  document.querySelectorAll('.mrow').forEach(r=>r.onclick=()=>{const i=+r.dataset.idx;expanded.has(i)?expanded.delete(i):expanded.add(i);renderMatrix();});
+}
+document.querySelectorAll('#filter button').forEach(b=>b.onclick=()=>{filter=b.dataset.p;
+  document.querySelectorAll('#filter button').forEach(x=>x.classList.toggle('on',x===b));renderMatrix();});
+
+function renderFindings(){
+  document.getElementById('findings').innerHTML=FINDINGS.map(f=>`
+    <div class="find">
+      <div class="fcell"><div class="fh">we believed</div><div class="fbelief">${f.belief}</div></div>
+      <div class="fcell"><div class="fh">what the run showed</div><div class="fevi">${f.evidence}</div></div>
+      <div class="fcell fverdict"><span class="vlabel ${f.verdict}">${f.verdict==='SURPRISE'?'SURPRISED US':f.verdict}</span><span class="fref">${f.ref}</span></div>
+    </div>`).join('');
+}
+
+function renderFails(){
+  document.getElementById('fmcards').innerHTML=FAILS.map(f=>`
+    <div class="fm">
+      <div class="fleft"><div class="fmode">${f.mode}</div><div class="fsym">${f.sym}</div></div>
+      <div class="fright">
+        <div class="frow"><div class="fk">where</div><div class="fv"><b>${f.boundary}</b></div></div>
+        <div class="frow"><div class="fk">fix (outside the model)</div><div class="fv">${f.fix}</div></div>
+        <div class="plainline"><span class="pt">plain</span>${f.plain}</div>
+        <div class="frow"><div class="fk">caught by</div><div class="fv"><span class="catch">${f.catch} · <span class="drow">${f.drow}</span></span></div></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderGloss(){
+  document.getElementById('gloss').innerHTML=GLOSS.map(g=>`<div class="gitem"><div class="gt">${g[0]}</div><div class="gd">${g[1]}</div></div>`).join('');
+}
+
+renderMatrix();renderFindings();renderFails();renderGloss();
+</script>
 </body>
 </html>

@@ -1,57 +1,353 @@
 ===== VISIBLE TEXT (business) =====
 
-Business analytics — scoping brief
-← back to hub
-Business analytics — scoping brief
-Enterprise IT-Ops & Employee Support agent · surface ask → real problem → where AI fits.
-PLACEHOLDER scaffold (public-safe, generic procurement framing). Replace with the
-handed-in presentation/business-analytics.html ; the /business route serves
-whatever is at that path.
-Surface ask vs. real problem
-The surface ask
-"Give employees a chatbot for IT/HR questions so the helpdesk queue shrinks."
-The real problem
-The queue is expensive because answering requires acting — resetting access, filing
-tickets, provisioning — and every action carries blast radius, tenant/clearance boundaries, and an
-audit obligation. A read-only bot deflects the easy half and leaves the costly half untouched.
-Where AI fits — and where it must not
-Capability AI role Boundary
-Answer from runbooks/policy Lead — routed, cited RAG tenant + clearance filtered before ranking; cite only retrieved ids
-Propose a remediation Lead — plan → act allowlisted tools; bounded loop
-Authorize an action Never the model deterministic authorize() , before the human gate
-Execute a side effect Never un-approved human-in-the-loop; approval bound to a proposal hash
-Decide what's true Not from retrieved text retrieved content is data, never instructions
-Success criteria (what "it works" means)
-Safe to leave running: every safety property is a tested invariant; the deploy blocks if one regresses.
-Deflection with action: resolves the acting half under human approval, not just the answering half.
-Provable: every run is traced with its node path, tokens, and control status; approvals are auditable.
-Portable: a new domain is four slots (golden set → corpus → tools → output contract); governance unchanged.
-Build-first (impact ÷ effort)
-FIRST the control plane — authz, tenant isolation, approval binding, injection-inert retrieval.
-THEN quality — retrieval recall, groundedness, model selection.
-Rationale: the differentiator isn't answering (everyone ships that) — it's being
-bounded and continuously proven . See the problem breakdown and
-multilayer audit for the computed version of this ranking.
+Agent Scoping Brief — Procurement Operations
+Agent Scoping Brief · Working Backwards · Scope Before Code
+Procurement operations: what earns an agent, and what doesn't
+The outcome, stated first
+An employee asks "can I buy this, and how do I get it approved?" and gets a correct, policy-grounded answer in seconds. When the request commits money, a human approves exactly what the agent proposed — nothing altered after they click — and the decision leaves an audit-proof record. Cycle time drops from days to minutes; not one dollar moves without an authorized, approved, tamper-evident decision.
+Act 1 · Hypothesis Decompose the problem, and use three numbers to decide what earns an agent — before writing code.
+Act 2 · Evidence Run the reference agent. Check each hypothesis against real telemetry and eval data — including one surprise.
+Act 3 · Next From what held and what surprised us, decide what to harden next — and what we deliberately deferred.
+01 The business problem
+Every purchase at a company runs the same gauntlet. An employee needs to buy something, has to find out if they're allowed to, has to get it approved by the right person, and finance needs the whole thing to be correct and auditable . Today most of that is manual — and the manual parts are both the slow parts and the risky parts.
+step 1 Employee asks "Can I buy this software? Who has to approve it?"
+step 2 Find the rule Someone digs through policy docs for the limit and the vendor status.
+step 3 Get approval A manager signs off — often without seeing whether it even passed policy.
+step 4 Commit the money A PO is raised. This step is irreversible and audited.
+It's slow Policy lookups and approval chases turn a two-minute decision into a two-day one.
+It's risky Approvers rubber-stamp; off-policy and duplicate spend slips through; the money step has the least scrutiny.
+02 How we prioritize — the numbers behind each call Act 1 · hypothesis
+We don't guess what to automate. We score each layer of the problem on three numbers , then apply one rule. The scores are our hypotheses — stated before we build, so the run in Act 2 can confirm or overturn them.
+the rule An agent earns its place only where the work is reasoning over messy, unstructured input (like reading policy documents to answer a question). Anything with a fixed, exact answer — a lookup, a threshold check, a routing rule — belongs in ordinary code, which is cheaper, faster, and can't be talked into the wrong answer.
+Frequency how often it happens
+Toil human time it eats today
+Blast radius cost if it goes wrong
+AGENT · reasoning + RAG
+DETERMINISTIC CODE
+PLAIN QUERY / API
+WORKFLOW
+HYBRID
+DASHBOARD / BI
+All P0 P1 P2
+03 Why this is worth solving now
+The bottleneck is human attention spent on the wrong things.
+Today, people spend their scarce attention on policy lookup (answerable from documents) and on rubber-stamping requests a fixed rule could have cleared or blocked. The one decision that actually needs human judgment — "should we commit this money?" — gets the least attention because it's buried under routine.
+The agent inverts that: automate the comprehension and the eligibility checks so a human is pulled in only for the genuinely discretionary, money-committing call — and when they are, they approve something that already passed authorization and can't be altered after they click. Fewer approvals, each one meaningful, each one tamper-evident. That's a workflow-integrity win before it's an AI win.
+04 What we'll measure to know it worked Act 1 · success criteria
+These are the success criteria for the hypotheses above — defined before code. Two classes, and they're not equal. Invariants must be exactly zero — they're integrity guarantees, not averages to optimize. Quality and cost are graded. Values marked REF are already measured on the reference implementation (the IT-ops agent that proves this framework); procurement's own numbers get set in a pilot.
+North star the one number that means it's working
+Autonomous resolution rate Share of eligible requests finished end-to-end with zero governance breaches . A resolution that breached doesn't count — the two are inseparable. target ≥ 60% pilot
+Invariant guardrails must be exactly 0 — these gate the release
+Authorization breaches Any action that ran when the rule should have blocked it. must = 0 0 REF
+Mutated executions Any action that ran different from what the human approved. must = 0 0 REF
+Cross-department leaks Any data or action crossing a department boundary. must = 0 0 REF
+Injection-containment failures Any hidden instruction in a document that reaches a real action. must = 0 0 REF
+Quality graded against thresholds
+Retrieval recall@k Did it pull the right policy text to answer from? ≥ 0.70 1.00 REF
+Groundedness Every claim traces to a citation; no made-up answers. = 1.00 1.00 REF
+Plan efficiency Useful steps ÷ total — no wandering. ≥ 0.80 nightly
+Operational cost & load
+Cost / resolved request Tokens × rate per request. Route cheap reads to cheap surfaces. track $0.013–0.038 REF
+Latency / resolved request End-to-end time per request. track 5.6–17.3s REF
+Human-approval load How often a human is pulled in. Too high = agent isn't earning its keep; too low = under-gating. tune pilot
+05 What we found when we ran it Act 2 · evidence
+We ran the reference agent through the real scenarios and the adversarial suite, and checked each hypothesis against actual data. Three held; one surprised us — and the surprise is the most useful thing here, because it's the kind of defect you only find by measuring, not by reasoning.
+06 The agent this becomes from scoping to build
+The hypotheses and the evidence point at one thing to build: a governed agent for the two layers that earned it — grounded policy answers, and a gated PO-approval action. Everything the triage flagged as code, query, workflow, or BI becomes a tool the agent calls , not agent reasoning. Here's the bare-minimum shape — and where it continues.
+what we're building
+A governed procurement agent : grounded policy Q&A over the policy corpus (RAG), plus a human-approved, tamper-evident PO submission — on a deterministic control plane, behind an eval gate, with per-layer telemetry on every run.
+the loop · what runs, in what order
+guard_input M →
+plan M →
+act M ⇄
+tools M →
+authorize C →
+approval_gate C →
+execute C →
+finalize M
+M = model nodes (reason, can be swayed) · C = code nodes (deterministic gates that enforce). The authorize→gate order is the D-045 fix: a disallowed action never reaches a human.
+where each concern lives · bare minimum
+Agent loop graph, nodes, per-layer telemetry intelligence · assurance
+Control plane authorize() · approval gate · proposal-hash control · deterministic
+Tools retrieve (RAG over policy) · vendor/budget lookup · submit_po integration
+Eval gate invariant (0-breach) + quality scorers assurance
+API surfaces /run · /approve · chat UI · agent-to-agent integration
+models · the swap is the point
+Claude closed weights · Bedrock + Anthropic API
+Qwen3 / Llama&nbsp;3.3 open weights · Bedrock provisioned
+OpenAI API · bake-off comparator
+model registry one swap point · one config line
+One registry, provisioned throughput. Swap the weights and every invariant still holds — the safety boundary is code, not the model. That's the claim the bake-off makes measurable.
+continues in the full agentic showcase →
+Live agent localhost:8000 · chat + agent-to-agent, real approval gate
+Run analytics per-layer telemetry — tokens · latency · cost · controls
+The repo clean structure — agent · control · tools · evals · api
+Audit trail problem & audit reports · every control → a test
+All four are tied together in the index hub — one page, presented start to finish.
+07 Where agents fail — and how we catch it
+The findings above were possible because we designed for the ways agents actually break. These aren't "the AI made something up" — they're the classic failures of letting an unpredictable component near an irreversible action. Each has a fix that lives outside the model, and each is caught by a test or by telemetry, not by hoping.
+08 What we're not building now — and the path if we did Act 3 · next
+Scope is a decision, not an accident. Each item below is a real production control with a known shape; deferring it is a judgment about the three-hour budget. A human already sees the exact action and its destination before anything fires, so nothing here is a hole in the demo — they're hardening for regulated scale.
+Deferred control Sev / effort Why deferred · what closes it
+Authenticate the approver (IdP at the gateway) S2 · M Today the fingerprint binds what is approved, not who approves. Production verifies an identity token so approval authority is authenticated too. I built the first control, documented the second.
+Destination allowlist (data-loss prevention) S2 · L The rules gate whether a tool runs, not where its output goes. A destination allowlist is the next control for regulated data. A human still sees the destination first.
+Tamper-evident compliance log S2 · M Tracing today is for debugging , not a permanent who-approved-what ledger. First item for an audited deployment.
+Look-alike identity characters S3 · M We fold case/spacing/width look-alikes; full cross-alphabet needs a specialized library. Low severity because identity comes from a verified login — tracked openly, not hidden.
+Model bake-off numbers RUN Swapping the model is trivial here; the same scenarios run through Claude, an open-weight model, and OpenAI. The point isn't which model wins — it's that every guardrail holds identically regardless. Numbers captured on a provisioned run.
+— Plain-English glossary
+Reference implementation: governed IT-ops agent · LangGraph + Bedrock (open & closed weights) + Anthropic API · deterministic control plane · per-layer telemetry · eval gate (invariant breaches = 0).
+REF values are measured on that implementation; procurement targets are set for a pilot. The framework stays fixed — the four domain slots (golden set, corpus, tools, output contract) are what change per customer.
 
 ===== <style> BLOCK(S) (business) =====
 
-:root { --ink:#1a1a2e; --mut:#6b7280; --line:#e5e7eb; --accent:#4338ca; --bg:#fafafa;
-          --good:#166534; --good-bg:#f0fdf4; --warn:#b45309; --warn-bg:#fffbeb; }
-  * { box-sizing:border-box; }
-  body { margin:0; font:15px/1.6 'Space Grotesk',-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); }
-  main { max-width:820px; margin:0 auto; padding:28px 18px 80px; }
-  a.back { color:var(--accent); text-decoration:none; font-size:13px; }
-  h1 { font-size:22px; margin:6px 0 2px; } .sub { color:var(--mut); margin-bottom:22px; }
-  h2 { font-size:15px; margin:26px 0 8px; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); }
-  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:12px 0; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .k { font-weight:700; } ul { margin:6px 0 0; padding-left:20px; } li { margin:3px 0; }
-  table { width:100%; border-collapse:collapse; margin-top:8px; font-size:14px; }
-  th { text-align:left; color:var(--mut); border-bottom:1px solid var(--line); padding:6px 8px; }
-  td { padding:6px 8px; border-bottom:1px solid #f3f4f6; vertical-align:top; }
-  .good { color:var(--good); } .must-not { color:#991b1b; }
-  .pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
-  .pill.good { background:var(--good-bg); } .pill.warn { background:var(--warn-bg); color:var(--warn); }
-  .ph { background:var(--warn-bg); border:1px solid #fcd34d; color:var(--warn); border-radius:10px;
-        padding:10px 14px; font-size:13px; margin-bottom:18px; }
-  @media (max-width:640px){ .grid{grid-template-columns:1fr} }
+:root{
+    --paper:#F7F9FB;--panel:#FFFFFF;--ink:#141C26;--muted:#5B6675;--faint:#8A94A2;
+    --line:#DCE3EB;--line-strong:#C4CDD8;--structure:#23395B;
+    --agent:#2E5AAC;--code:#0F2A43;--query:#1F7A5C;--flow:#B7791F;--hybrid:#6D4AA6;--dash:#5B6675;
+    --agent-bg:#EAF0FA;--code-bg:#E7EBF0;--query-bg:#E4F2EC;--flow-bg:#F8EFDC;--hybrid-bg:#EDE6F6;--dash-bg:#ECEEF1;
+    --p0:#B23A3A;--p1:#B7791F;--p2:#8A94A2;
+    --plain:#0B6E63;--plain-bg:#E1F1EE;
+    --shadow:0 1px 2px rgba(20,28,38,.05),0 8px 24px rgba(20,28,38,.06);
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --disp:"Space Grotesk",system-ui,-apple-system,sans-serif;
+    --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.55;
+    -webkit-font-smoothing:antialiased;padding:32px 24px 64px}
+  .wrap{max-width:1040px;margin:0 auto}
+
+  header{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:6px}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--structure);font-weight:500;margin-bottom:10px}
+  h1{font-family:var(--disp);font-weight:700;font-size:clamp(26px,3.6vw,38px);line-height:1.04;
+    margin:0 0 14px;letter-spacing:-.015em}
+  .backwards{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--structure);
+    border-radius:0 8px 8px 0;padding:14px 18px;box-shadow:var(--shadow);max-width:82ch}
+  .backwards .bl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  .backwards p{margin:0;font-size:14.5px;color:var(--ink)}
+  .backwards b{color:var(--structure)}
+
+  /* act ribbon */
+  .acts{display:flex;gap:8px;margin:22px 0 4px;flex-wrap:wrap}
+  .act{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+  .act .an{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--structure);font-weight:700;margin-bottom:5px}
+  .act .ad{font-size:12.5px;color:var(--muted)}
+  .act.a1{border-top:3px solid var(--agent)} .act.a2{border-top:3px solid var(--query)} .act.a3{border-top:3px solid var(--flow)}
+
+  section{margin-top:38px}
+  .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .snum{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--structure);
+    border:1.5px solid var(--structure);border-radius:6px;padding:2px 8px;flex:0 0 auto}
+  .sh h2{font-family:var(--disp);font-size:20px;font-weight:600;margin:0;letter-spacing:-.01em}
+  .sh .stage{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    padding:3px 8px;border-radius:5px;margin-left:auto;align-self:center}
+  .stage.hyp{background:var(--agent-bg);color:var(--agent)} .stage.evi{background:var(--query-bg);color:var(--query)} .stage.nxt{background:var(--flow-bg);color:var(--flow)}
+  .lead{color:var(--muted);font-size:14.5px;margin:0 0 18px;max-width:80ch}
+  .lead b{color:var(--ink);font-weight:600}
+
+  .plainbox{background:var(--plain-bg);border:1px solid #BEE0DA;border-radius:8px;padding:10px 13px;margin:0 0 16px;
+    font-size:12.5px;color:#0B4A43;max-width:82ch}
+  .plainbox .pt{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--plain);margin-right:6px}
+
+  /* the story of a request */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
+  .fstep{flex:1;min-width:150px;padding:14px 15px;border-right:1px solid var(--line)}
+  .fstep:last-child{border-right:0}
+  .fstep .fsn{font-family:var(--mono);font-size:10px;color:var(--faint);margin-bottom:5px}
+  .fstep .fst{font-family:var(--disp);font-weight:600;font-size:13.5px;margin-bottom:3px}
+  .fstep .fsd{font-size:11.5px;color:var(--muted)}
+  .breaks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .brk{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--p0);border-radius:0 8px 8px 0;padding:12px 14px;box-shadow:var(--shadow)}
+  .brk .bt{font-family:var(--disp);font-weight:600;font-size:13px;margin-bottom:3px}
+  .brk .bd{font-size:12px;color:var(--muted)}
+
+  /* prioritization numbers */
+  .scorekey{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 16px;font-size:12px;color:var(--muted)}
+  .scorekey .sk{display:flex;align-items:center;gap:7px}
+  .scorekey .sk b{color:var(--ink);font-weight:600}
+  .dots{display:inline-flex;gap:3px}
+  .dot{width:7px;height:7px;border-radius:50%;background:#D5DCE4}
+  .dot.on{background:var(--structure)}
+
+  .tools-legend{display:flex;flex-wrap:wrap;gap:8px 10px;margin:14px 0 14px}
+  .vtag{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.05em;padding:4px 9px;border-radius:5px}
+  .vtag.AGENT{color:var(--agent);background:var(--agent-bg)}
+  .vtag.CODE{color:#fff;background:var(--code)}
+  .vtag.QUERY{color:var(--query);background:var(--query-bg)}
+  .vtag.FLOW{color:var(--flow);background:var(--flow-bg)}
+  .vtag.HYBRID{color:var(--hybrid);background:var(--hybrid-bg)}
+  .vtag.BI{color:var(--dash);background:var(--dash-bg)}
+
+  .filter{display:flex;gap:7px;margin-bottom:14px}
+  .filter button{font-family:var(--mono);font-size:11.5px;border:1px solid var(--line-strong);background:var(--panel);
+    color:var(--muted);border-radius:7px;padding:6px 12px;cursor:pointer;transition:.14s}
+  .filter button:hover{border-color:var(--structure);color:var(--ink)}
+  .filter button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .matrix{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .mrow{display:grid;grid-template-columns:44px 1fr 150px 116px;gap:14px;align-items:center;
+    padding:13px 18px;border-bottom:1px solid #EFF3F7;cursor:pointer;transition:background .12s}
+  .mrow:last-child{border-bottom:0}
+  .mrow:hover{background:#FAFBFC}
+  .mrow .pri{font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;padding:3px 0;border-radius:5px}
+  .mrow .pri.P0{color:#fff;background:var(--p0)} .mrow .pri.P1{color:#fff;background:var(--p1)} .mrow .pri.P2{color:#fff;background:var(--p2)}
+  .mrow .task{min-width:0}
+  .mrow .task .tt{font-family:var(--disp);font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
+  .mrow .task .tt .exp{margin-left:auto;color:var(--faint);font-family:var(--mono);font-size:12px}
+  .mrow .task .ts{font-size:12px;color:var(--muted);margin-top:2px}
+  .mrow .verdict{display:flex;justify-content:flex-end}
+  .mrow .scorecol{display:flex;flex-direction:column;gap:4px}
+  .mrow .scorecol .sline{display:grid;grid-template-columns:16px auto;gap:6px;align-items:center;font-family:var(--mono);font-size:9px;color:var(--faint)}
+  .mdetail{grid-column:1/-1;margin-top:8px;padding:13px 15px;background:#FAFBFD;border:1px solid var(--line);border-radius:8px}
+  .mdetail .dh{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:7px}
+  .mdetail .hypo{font-size:13.5px;color:var(--ink);margin:0 0 10px;font-weight:500}
+  .mdetail .hypo::before{content:"HYPOTHESIS  ";font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;color:var(--agent);background:var(--agent-bg);padding:2px 6px;border-radius:4px;margin-right:8px;vertical-align:1px}
+  .mdetail p{margin:0 0 9px;font-size:13px;color:var(--ink)}
+  .mdetail .plainline{font-size:12px;color:#0B4A43;background:var(--plain-bg);border-radius:6px;padding:7px 10px;margin:0}
+  .mdetail .plainline .pt{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--plain);margin-right:6px}
+
+  .why{background:var(--structure);color:#fff;border-radius:12px;padding:20px 22px;box-shadow:var(--shadow)}
+  .why h3{font-family:var(--disp);font-size:16px;margin:0 0 10px;font-weight:600}
+  .why p{margin:0 0 10px;font-size:14px;opacity:.94}
+  .why p:last-child{margin-bottom:0}
+  .why b{color:#EAF0FA}
+
+  .mgroup{margin-bottom:16px}
+  .mgt{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--structure);
+    font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .mgt .tagline{font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted);font-size:12px}
+  .mcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  .mcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 15px;box-shadow:var(--shadow)}
+  .mcard.invariant{border-top:3px solid var(--p0)}
+  .mcard.north{border-top:3px solid var(--structure)}
+  .mcard.quality{border-top:3px solid var(--query)}
+  .mcard.ops{border-top:3px solid var(--flow)}
+  .mcard .mn{font-family:var(--disp);font-weight:600;font-size:13.5px;margin-bottom:4px}
+  .mcard .md{font-size:11.5px;color:var(--muted);line-height:1.4;margin-bottom:10px}
+  .mcard .mv{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:11px}
+  .mcard .target{color:var(--muted)}
+  .mcard .measured{font-weight:700}
+  .mcard .measured.good{color:var(--query)}
+  .mcard .measured.zero{color:var(--p0)}
+  .mcard .measured.pending{color:var(--faint)}
+  .measured-badge{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:var(--query-bg);color:var(--query)}
+  .measured-badge.ref{background:var(--agent-bg);color:var(--agent)}
+
+  /* findings */
+  .find{background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:1fr 1fr 132px;gap:0;overflow:hidden;margin-bottom:12px}
+  .find .fcell{padding:14px 16px;border-right:1px solid var(--line)}
+  .find .fcell:last-child{border-right:0}
+  .find .fh{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  .find .fbelief{font-size:13px;color:var(--ink)}
+  .find .fbelief b{color:var(--agent)}
+  .find .fevi{font-size:12.5px;color:var(--ink)}
+  .find .fevi .num{font-family:var(--mono);font-weight:700;color:var(--query)}
+  .find .fevi .surprise{font-family:var(--mono);font-weight:700;color:var(--hybrid)}
+  .find .fverdict{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;background:#FBFCFD}
+  .vlabel{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.05em;padding:4px 9px;border-radius:5px}
+  .vlabel.CONFIRMED{color:var(--query);background:var(--query-bg)}
+  .vlabel.SURPRISE{color:var(--hybrid);background:var(--hybrid-bg)}
+  .vlabel.PENDING{color:var(--faint);background:var(--dash-bg)}
+  .find .fref{font-family:var(--mono);font-size:9px;color:var(--faint)}
+
+  /* failure modes */
+  .fmcards{display:flex;flex-direction:column;gap:12px}
+  .fm{background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:220px 1fr;gap:0;overflow:hidden}
+  .fm .fleft{background:linear-gradient(180deg,#FBFAF6,#FDFDFB);padding:15px 16px;border-right:1px solid var(--line)}
+  .fm .fmode{font-family:var(--disp);font-weight:600;font-size:14px;margin:0 0 6px;color:var(--code)}
+  .fm .fsym{font-size:11.5px;color:var(--muted);line-height:1.4}
+  .fm .fsym b{color:var(--p0);font-weight:600}
+  .fm .fright{padding:15px 16px;display:flex;flex-direction:column;gap:8px}
+  .fm .frow{display:grid;grid-template-columns:74px 1fr;gap:10px;font-size:12.5px;align-items:baseline}
+  .fm .frow .fk{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding-top:2px}
+  .fm .frow .fv{color:var(--ink)}
+  .fm .frow .fv b{color:var(--structure)}
+  .fm .plainline{font-size:11.5px;color:#0B4A43;background:var(--plain-bg);border-radius:6px;padding:6px 9px}
+  .fm .plainline .pt{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--plain);margin-right:5px}
+  .fm .catch{font-family:var(--mono);font-size:11px;color:var(--query);background:var(--query-bg);border-radius:6px;padding:6px 9px;display:inline-block}
+  .fm .catch .drow{color:var(--code);font-weight:700}
+
+  /* scope cut */
+  .cut{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .cutrow{display:grid;grid-template-columns:1fr 92px 1fr;gap:14px;align-items:start;padding:13px 18px;border-bottom:1px solid #EFF3F7}
+  .cutrow:last-child{border-bottom:0}
+  .cutrow .cn{font-family:var(--disp);font-weight:600;font-size:13.5px}
+  .cutrow .sev{font-family:var(--mono);font-size:10px;font-weight:700;text-align:center;padding:3px 0;border-radius:5px;color:#fff;align-self:start}
+  .cutrow .sev.S2{background:var(--flow)} .cutrow .sev.S3{background:var(--p2)} .cutrow .sev.RUN{background:var(--agent)}
+  .cutrow .cwhy{font-size:12px;color:var(--muted)}
+  .cutrow .cwhy b{color:var(--ink)}
+  .cuthead{display:grid;grid-template-columns:1fr 92px 1fr;gap:14px;padding:11px 18px;background:#FBFCFD;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .cuthead .cc{text-align:center}
+
+  /* glossary */
+  .gloss{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px 18px}
+  .gloss h3{font-family:var(--disp);font-size:14px;margin:0 0 12px;font-weight:600}
+  .gitem{display:grid;grid-template-columns:170px 1fr;gap:14px;padding:8px 0;border-bottom:1px solid #EFF3F7;font-size:12.5px}
+  .gitem:last-child{border-bottom:0}
+  .gitem .gt{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--structure)}
+  .gitem .gd{color:var(--muted)}
+
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.6}
+  .foot b{color:var(--muted)}
+
+  .stage.bld{background:var(--agent-bg);color:var(--agent)}
+  .decision{background:var(--agent-bg);border:1px solid #CFE0F5;border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .decision .dl{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--agent);font-weight:700;margin-bottom:6px}
+  .decision p{margin:0;font-size:14px;color:var(--ink)}
+  .decision b{color:var(--structure)}
+  .blueprint{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .bp-col{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:15px 16px}
+  .bp-h{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+  .bp-flow{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+  .bp-node{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);border-radius:7px;padding:5px 8px;background:#FBFCFD}
+  .bp-node .bn{font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .bp-node .bk{font-family:var(--mono);font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px}
+  .bp-node .bk.M{color:var(--agent);background:var(--agent-bg)}
+  .bp-node .bk.C{color:#fff;background:var(--code)}
+  .bp-arrow{color:var(--faint);font-family:var(--mono);font-size:12px}
+  .bp-note{font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.45}
+  .bp-map{display:flex;flex-direction:column;gap:10px}
+  .bp-item{display:grid;grid-template-columns:112px 1fr;gap:11px;align-items:start}
+  .bp-item .bpath{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--structure);line-height:1.3}
+  .bp-item .bdesc{font-size:12px;color:var(--muted);line-height:1.4}
+  .plane{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 5px;border-radius:3px;background:var(--dash-bg);color:var(--dash);margin-left:2px;white-space:nowrap}
+  .plane.ctrl{background:var(--code);color:#fff}
+  .bp-models{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:15px 16px;margin-bottom:14px}
+  .bmh{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+  .bmrow{display:flex;flex-wrap:wrap;gap:10px}
+  .mchip{border:1px solid var(--line-strong);border-radius:9px;padding:9px 12px;background:#FBFCFD;min-width:148px}
+  .mchip .mcn{font-family:var(--disp);font-weight:600;font-size:13px}
+  .mchip .mcd{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
+  .mchip.reg{border-style:dashed;border-color:var(--structure)}
+  .bmnote{font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.45}
+  .bmnote b{color:var(--structure)}
+  .forward{background:var(--structure);color:#fff;border-radius:12px;padding:16px 18px}
+  .fwl{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#9FB3D0;margin-bottom:12px}
+  .fwitems{display:flex;flex-wrap:wrap;gap:10px}
+  .fwitem{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:9px 12px;flex:1;min-width:158px}
+  .fwitem .fin{font-family:var(--disp);font-weight:600;font-size:13px}
+  .fwitem .fid{font-family:var(--mono);font-size:10px;color:#B9C6DA;margin-top:2px;line-height:1.4}
+  .fwtie{font-size:12px;color:#CDD8E8;margin-top:12px}
+  .fwtie b{color:#fff}
+  @media (max-width:760px){
+    .layers,.breaks{grid-template-columns:1fr}
+    .mrow{grid-template-columns:40px 1fr;gap:8px}
+    .mrow .verdict,.mrow .scorecol{display:none}
+    .find{grid-template-columns:1fr}
+    .find .fcell{border-right:0;border-bottom:1px solid var(--line)}
+    .fm{grid-template-columns:1fr}
+    .fm .fleft{border-right:0;border-bottom:1px solid var(--line)}
+    .cutrow,.cuthead{grid-template-columns:1fr}
+    .cuthead .cc{display:none}
+    .gitem{grid-template-columns:1fr;gap:2px}
+    .acts{flex-direction:column}
+    .blueprint{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  :focus-visible{outline:2px solid var(--structure);outline-offset:2px;border-radius:4px}

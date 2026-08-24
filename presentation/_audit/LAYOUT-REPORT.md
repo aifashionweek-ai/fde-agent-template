@@ -181,3 +181,67 @@ Two ways forward:
 
 Everything else in Phase 2 (shell/token alignment for business + chat + dashboard, factoring
 the one tokens block, the catch-proof drift test) is unblocked and can proceed regardless.
+
+---
+
+# PHASE 3 — VERIFY (post-alignment)
+
+**Decision taken:** the user handed in the real three-act file at
+`presentation/business-analytics-src.html`. That file IS the reference design system the
+original brief described (`--structure/--ink/--paper`, `.snum` section headers, Space Grotesk +
+JetBrains Mono) — it simply hadn't existed on disk during Phase 1. (My Phase-1 hunch that the
+`--acc` report family was the house style was therefore superseded: those pages are siblings in
+the same ink-blue/cool-white + dual-font family, and already carried the shared font stack.)
+
+**What changed (layout/shell only — no DATA touched):**
+- `/business` — now serves the three-act brief (`business-analytics.html` = the handed-in
+  `-src.html` body **verbatim**, wording/numbers unchanged) with the 3 external Google-Fonts
+  `<link>`s removed → self-contained. Old placeholder gone.
+- `/` (chat, `api/chat.html`) — body font → `var(--sans)` (Space Grotesk); the 3 mono spans →
+  `var(--mono)` (JetBrains Mono). **All chat JS/interactivity untouched.**
+- `/dashboard` (`api/dashboard.html`) — body font → `var(--sans)`; the 4 mono spans →
+  `var(--mono)`. **All live-telemetry JS untouched.**
+- New single source of truth: `presentation/tokens.py` (font stack + shared palette var +
+  served-route map). No external CSS link — self-contained is preserved by inlining.
+- New catch-proof test: `tests/test_presentation_tokens.py` asserts every served route carries
+  `Space Grotesk` + `JetBrains Mono` + `--line`, proves the check bites on a stripped page, and
+  guards `/business` against regressing to the placeholder.
+
+**The 8 report/data stops were left as-is** (they already carry both fonts + `--line` and pass
+the invariant). Per the brief — "keep reading their real JSON; only the presentation shell
+changes; do not rebuild committed DATA" — they were not re-hued. They live in the same
+ink-blue/cool-white + Space-Grotesk/JetBrains-Mono family as the flagship; the drift test now
+locks that in for all 12.
+
+## Final table — per served page (re-dumped from the live server)
+
+| route | shared tokens (SpaceGrotesk+JetBrainsMono+`--line`) | section-header style | diverges |
+|---|---|---|---|
+| `/` chat | **yes** | interactive (chat transcript) — chrome aligned | none |
+| `/hub` | **yes** | link list (by design) | none |
+| `/business` | **yes** | `.snum` numbered badges (reference) | none |
+| `/dashboard` | **yes** | interactive (telemetry panels) — chrome aligned | none |
+| `/problem` | **yes** | numbered uppercase, house family | none |
+| `/audit` | **yes** | numbered uppercase, house family | none |
+| `/data` | **yes** | numbered uppercase, house family | none |
+| `/infra` | **yes** | `N ·` numbered house header | none |
+| `/evals` | **yes** | `N ·` numbered house header | none |
+| `/deploy` | **yes** | `N ·` numbered house header | none |
+| `/a2a` | **yes** | `N ·` numbered house header | none |
+| `/signal` | **yes** | `N ·` numbered house header | none |
+
+**Verified live:** all 12 routes return 200 and contain `Space Grotesk` + `JetBrains Mono` +
+`--line` (table above, re-dumped from `:8099`). `/business` renders all three-act sections
+(hypothesis/prioritization, "what we found", "the agent this becomes", plain-English glosses,
+glossary) and no longer shows the old "WHERE AI FITS / SUCCESS CRITERIA / BUILD-FIRST"
+placeholder. Self-contained: **0 external asset loads** (no external stylesheet / font / script /
+`@import` / remote `img src`) across all 12 dumps — nothing is fetched at render time.
+
+> Note (pre-existing, out of scope — flagged not changed): `/hub` has two outbound `<a href>`
+> *navigation* hyperlinks — one stale `http://localhost:8000/` on stop #1 (should be relative `/`)
+> and a GitHub repo link. These are hyperlinks, not asset loads, so they don't affect the
+> self-contained (no-asset) property, but the `localhost:8000` link is a stale dev URL worth fixing
+> in a follow-up (it's content/behavior, not design-system shell, so untouched here).
+
+**Catch-proof:** `tests/test_presentation_tokens.py::test_invariant_actually_bites` proves the
+guard fails when the font stack is removed — it is not decoration (J-02).

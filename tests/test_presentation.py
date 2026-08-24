@@ -18,7 +18,10 @@ def test_business_served():
     r = client.get("/business")
     assert r.status_code == 200
     assert "text/html" in r.headers["content-type"]
-    assert "scoping brief" in r.text
+    # the three-act brief (not the old placeholder). Deeper token/section assertions live in
+    # tests/test_presentation_tokens.py.
+    assert "scoping brief" in r.text.lower()
+    assert "The agent this becomes" in r.text
 
 
 def test_all_six_stops_return_200():
