@@ -1,0 +1,134 @@
+===== VISIBLE TEXT (audit) =====
+
+FDE Agent · Audit
+FDE Agent — Multilayer Audit
+Enterprise IT-Ops & Employee Support agent · every number below is read from a real log, git, or a live pytest run. No asserted greens.
+PASS · 173 pass · 0 fail
+tests 173/173
+last 173 passed in 7.02s
+git feat/presentation@a8542a7
+tools 9 (HITL-gated actions)
+manifest rows 45
+eval model claude-sonnet-api
+judges factual, rubric_pass
+generated 2026-08-24 02:43 UTC
+The 10 layers — what, why, alternatives, evidence
+Click any layer to drill down. Evidence bars are scorer means from the latest eval run (bake-claude).
+🛡️ L1 Guardrails (6 layers)
+▾
+What Layered input/output safety: regex PII+injection, Presidio, Prompt-Guard/Lakera, Bedrock Guardrails, output grounding, HITL.
+Why this choice Deterministic where possible (free, fast, testable), model-judged only where necessary, humans on the residual. Each layer is a tested invariant, not a prompt.
+Alternatives considered LLM-judge-everything (slow, non-deterministic, costly) · a single vendor guardrail (vendor lock, misses tool-level risks) · no guardrails (unshippable).
+Evidence (from latest eval: bake-claude)
+injection_refused 100% no_raw_pii 100% grounded 100%
+Governed by D-005 Input + output PII redaction; prompt-injection detection (layered) ✓ tests/test_guards.py D-012 Output is GROUNDED: citations ⊆ retrieved ids; ungrounded → capped confidence or reject ✓ tests/test_guards.py
+🔎 L2 Routed Retrieval
+▾
+What Provenance per chunk; tenant + 4-tier sensitivity + source filters applied BEFORE ranking; hybrid BM25+embeddings; ids are the only legal citations.
+Why this choice Security must be STRUCTURAL. A filter can&#x27;t be out-ranked; a soft boost can. Multi-tenant isolation and clearance ceilings are enforced, not hoped for.
+Alternatives considered Score-then-filter (leakable) · single-tenant index per customer (cost, ops) · pure vector search (misses exact ids/SKUs; no clearance model).
+Evidence (from latest eval: bake-claude)
+grounded 100%
+Governed by D-010 Every retrieved chunk carries provenance (doc, source, tenant, sensitivity, time) ✓ tests/test_retrieval.py D-011 Retrieval is ROUTED: tenant isolation + sensitivity ceiling + source allow-list, applied b ✓ tests/test_retrieval.py
+🧠 L3 Agentic Memory (3 kinds)
+▾
+What Short-term (checkpointed thread), long-term semantic + episodic (tenant+user scoped, injected before planning, approval-gated writes, TTL, forget()).
+Why this choice Most &#x27;agents&#x27; are stateless. Real agents remember safely: memory is customer data — structurally isolated, provenance-stamped, forgettable. Writes are decisions (approval-gated).
+Alternatives considered No memory (re-asks everything) · stuff-everything-in-context (cost, leakage) · unscoped global memory (cross-tenant leak).
+Evidence (from latest eval: bake-claude)
+No eval scorer maps directly — evidence via tests + manifest below
+Governed by D-016 Long-term memory: facts persist across threads/sessions, injected as context, upsert by (s ✓ tests/test_memory.py D-017 Memory is customer data: tenant+user isolation is structural, provenance recorded, right-t ✓ tests/test_memory.py D-018 Memory WRITES are side effects: remember/human_handoff gated through approval (HITL) ✓ tests/test_guards.py
+🔧 L4 Tools & Human-in-the-Loop
+▾
+What 9 tools: read (search/lookup/recall/calc) with no approval; action (reset_access/create_ticket/provision/remember/escalate) gated through a human approval node.
+Why this choice An agent that answers is useful; one that ACTS is valuable — but every side effect must be human-approved. Unknown tool -> approval by default; strict mode raises on drift.
+Alternatives considered Read-only agent (no real work) · auto-execute actions (dangerous) · approve-everything (useless friction).
+Evidence (from latest eval: bake-claude)
+hitl_respected 100% tool_allowlist 100% within_budget 100%
+Governed by D-003 Tools are allowlisted; unknown tool call = hard reject ✓ tests/test_guards.py D-004 Destructive/side-effect tools require human approval (interrupt) ✓ tests/test_guards.py D-007 Cost/latency/tool-call budget per run; abort past budget ✓ tests/test_guards.py
+⚖️ L5 Model Selection (open vs closed)
+▾
+What Constraint-driven registry: select_model(task, residency, cost, quality, license). Anthropic API + Bedrock (Claude closed; Qwen/Llama open, in-account) + HF. Fine-tune path via LoRA + Bedrock Custom Model Import.
+Why this choice The governance layer bounds worst-case behavior INDEPENDENT of model choice — the deterministic controls run outside the model and hold across Claude/Qwen/Llama — so model selection is a pure quality/cost/residency decision, not a safety one. Separate &#x27;can we use it&#x27; (residency/license/cost) from &#x27;is it good&#x27; (our evals).
+Alternatives considered One hardcoded model (no residency story) · always-open (quality risk on reasoning) · always-closed (cost, lock-in, no in-account option for regulated data).
+Evidence (from latest eval: bake-claude)
+9 deterministic scorers · 1.00 across ALL 3 models ✓ scorer Claude Haiku 4.5 (closed/API) Qwen3-32B (open/Bedrock) Llama3.3-70B (open/Bedrock) schema_valid 1.00 1.00 1.00 tool_allowlist 1.00 1.00 1.00 within_budget 1.00 1.00 1.00 injection_refused 1.00 1.00 1.00 no_raw_pii 1.00 1.00 1.00 grounded 1.00 1.00 1.00 hitl_respected 1.00 1.00 1.00 path_sane 1.00 1.00 1.00 confidence_reported 1.00 1.00 1.00 source: model-eval-2026-08-19.md
+Governed by D-008 Model is swappable via env (Anthropic / Bedrock / HF) behind one interface ✓ agent/llm.py · agent/models.py D-009 Model SELECTION is constraint-driven and deterministic (residency, cost, quality, task, li ✓ tests/test_models.py
+📡 L6 Tracing
+▾
+What LangSmith with tenant/model/sha metadata; the node PATH (incl tool names) is carried in every result and scored (path_sane).
+Why this choice You can&#x27;t operate what you can&#x27;t see. AI-native tracing shows prompts, tool I/O, tokens, and the path — turning prod traces into new eval rows.
+Alternatives considered HTTP-span APM only (blind to prompts/tools) · no tracing (undebuggable) · logs-only (no structure, no path).
+Evidence (from latest eval: bake-claude)
+path_sane 100%
+Governed by D-006 Every run is traced (LangSmith) and scored (Braintrust) ✓ evals/run_evals.py · agent/tracing.py D-013 Every result carries its own trace path (node sequence); path must start at guard_input ✓ tests/test_evals_meta.py
+✅ L7 Evals & Regression Gate
+▾
+What Golden set with slices; deterministic scorers at 1.0, two independent LLM judges (Claude+GPT) with agreement + calibration; gate blocks on regression, runs OFFLINE from a results file.
+Why this choice &#x27;The evals passed&#x27; must MEAN something: invariants at 1.0, judges measured against each other, per-slice regression gate, never pass on missing rows. Braintrust is the dashboard; a committed file is the contract.
+Alternatives considered Vibe-check (no signal) · single judge (unmeasured) · online-only gate (network-coupled CI) · pass-on-average (hides slice regressions).
+Evidence (from latest eval: bake-claude)
+schema_valid 100% confidence_reported 100%
+Governed by D-014 Eval confidence: calibration (ECE) + two-judge agreement + per-slice regression gate ✓ tests/test_evals_meta.py · evals/gate.py
+🔌 L8 MCP Integration
+▾
+What Expose the agent&#x27;s READ tools to MCP clients (Claude Desktop, IDEs, other agents) and consume customer MCP servers — everything flows through the SAME guards + HITL. Published set is derived from the tool registry; action tools are never exposed.
+Why this choice MCP hands tools to a client we don&#x27;t govern, so only reads (tenant/clearance-scoped inside themselves) are safe to publish. A side effect is a decision — it stays behind the approval node. The server refuses to boot if an action tool ever looks read-only (fail loud).
+Alternatives considered Expose all tools over MCP (a client could fire side effects unapproved) · a bespoke non-standard API (no interop) · no MCP (agent can&#x27;t compose with the customer&#x27;s other agents).
+Evidence (from latest eval: bake-claude)
+READ tools published over MCP 4: search_policy, lookup_employee, recall_memory, calculate ✓ action tools withheld (stay behind HITL) 5: create_ticket, escalate_to_human, provision_resource, remember, reset_access ✓ side-effect tool exposed over MCP none — by construction ✓
+Governed by D-025 MCP server publishes READ tools ONLY; the 5 action tools are never exposed and stay behind ✓ tests/test_mcp.py
+🧩 L9 Vector Backend (swappable)
+▾
+What The retrieval contract search(query, tenant, sensitivity, k) is backend-swappable: in-memory BM25 by default (zero-setup), Pinecone via VECTOR_BACKEND=pinecone — namespace-per-tenant, sensitivity as a query-time metadata filter. Callers never branch on the backend.
+Why this choice Meet the customer&#x27;s data where it already lives (Pinecone/Databricks/Snowflake/pgvector) without changing the agent. Tenant isolation stays structural (a query hits ONE namespace); the contract is the seam, so the store is a config choice, not a rewrite.
+Alternatives considered Hardcode one vector DB (rewrite per customer) · move customer data into our store (residency/governance nightmare) · post-hoc filtering (leakable, not structural).
+Evidence (from latest eval: bake-claude)
+default backend (zero-setup) in-memory ✓ VECTOR_BACKEND=pinecone → PineconeIndex yes ✓ search() contract identical across backends yes ✓
+Governed by D-024 Pinecone vector backend behind UNCHANGED search() contract (VECTOR_BACKEND=pinecone): name ✓ tests/test_retrieval_backend.py
+🚀 L10 Infra / Deployment
+▾
+What deploy/ ships three runnable paths: Dockerfile (container/App Runner), template.yaml (AWS SAM → Lambda), hf_endpoint.py (HF Inference Endpoint for open weights). Bedrock runs models in-account for residency.
+Why this choice Forward-deployed means it has to RUN in the customer&#x27;s environment in hours, inside their compliance boundary. Serverless for the API, in-account Bedrock for regulated inference, self-hosted HF for open weights — the residency story is backed by real deploy artifacts, not a diagram.
+Alternatives considered A notebook demo (never ships) · one cloud only (no residency options) · vendor API only (no in-account path for regulated data).
+Evidence (from latest eval: bake-claude)
+container → App Runner deploy/Dockerfile ✓ AWS SAM → Lambda deploy/template.yaml ✓ HF Inference Endpoint (open weights) deploy/hf_endpoint.py ✓
+Governed by D-027 Safety/tracing/infra consolidated: 6 guard layers (deterministic-first), egress PII on EVE ✓ docs/14-safety-tracing-infra.md
+Eval scores by slice
+slice confidence_reported factual grounded hitl_respected injection_refused no_raw_pii path_sane rubric_pass schema_valid tool_allowlist within_budget adversarial 100% 100% 100% 100% 100% 100% 100% 80% 100% 100% 100% happy 100% 100% 100% 100% 100% 100% 100% 100% 100% 100% 100% pii 100% 100% 100% 100% 100% 100% 100% 100% 100% 100% 100%
+Deterministic scorers (schema, PII, grounding, HITL, budget, path) are the safety invariants — they must read 1.00, and grounding at 1.00 is the real correctness signal (every citation ⊆ retrieved evidence). factual and rubric_pass are LLM-judge quality scores: a correctness rubric that rewards a right answer regardless of extra helpful detail, and still fails a wrong one. Some judge strictness is inherent — treat these as nuance, not pass/fail; the invariants above are pass/fail.
+Design deep-dives
+Each layer has a full playbook:
+01-model-selection 02-bedrock 03-retrieval-and-customer-data 04-guardrails 05-evals-braintrust 06-tracing-langsmith 07-huggingface-deploy 08-tuning 09-fde-playbook 10-agentic-memory 12-data-platforms 13-mcp-integration 14-safety-tracing-infra ARCHITECTURE DEMO-RUNBOOK DEMO-TEMPLATE HARDENING-BACKLOG INGESTION-PROOF LOOM-SCRIPT PRESENTATION REHEARSAL.local SESSION-HANDOFF model-eval-2026-08-19
+Reproduce: python -m evals.audit_report · Tests: python update.py --check ·
+Every verdict computed from results.sqlite-equivalent (evals/results/*.json), git, and a live pytest run — not remembered.
+
+===== <style> BLOCK(S) (audit) =====
+
+:root{--bg:#fafafa;--card:#ffffff;--line:#e5e7eb;--txt:#1a1a2e;--dim:#6b7280;--acc:#4338ca;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.6 'Space Grotesk',-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:26px;margin:0 0 4px} .sub{color:var(--dim);margin:0 0 24px}
+.verdict{display:inline-block;padding:6px 14px;border-radius:8px;font-weight:700;color:#fff;font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 28px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}
+.chip b{color:var(--acc)}
+h2{font-size:15px;margin:32px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc)}
+.layer{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+.layer summary{cursor:pointer;padding:14px 16px;font-weight:600;list-style:none;display:flex;align-items:center;gap:10px}
+.layer summary::-webkit-details-marker{display:none}
+.lic{font-size:18px}.lid{color:var(--acc);font-weight:700;font-size:13px;background:#eef2ff;padding:2px 8px;border-radius:6px;font-family:var(--mono)}
+.chev{margin-left:auto;color:var(--dim)} details[open] .chev{transform:rotate(180deg)}
+.body{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:0 16px 18px}
+.body h4{margin:14px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
+.body p{margin:0;font-size:14px} .alt{color:var(--dim)}
+table.ev,table.slices{width:100%;border-collapse:collapse;font-size:13px}
+table.ev td{padding:4px 0} .noev{color:var(--dim);font-style:italic}
+.bar{position:relative;background:#eef2ff;border:1px solid var(--line);border-radius:5px;height:20px;min-width:120px}
+.bar .fill{height:100%;border-radius:4px} .bar span{position:absolute;right:6px;top:0;font-size:11px;line-height:20px;color:var(--txt);font-family:var(--mono)}
+ul.manifest{margin:6px 0 0;padding-left:18px} ul.manifest li{font-size:12px;margin:3px 0}
+.ok{color:#166534} .bad{color:#991b1b;font-weight:600} .sl{font-weight:600;color:var(--acc)}
+table.facts td{padding:4px 0;font-size:12px} table.bakeoff td,table.bakeoff th{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}
+table.slices th,table.slices td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}
+.docs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px} .doc{background:#eef2ff;color:var(--acc);text-decoration:none;padding:5px 10px;border-radius:6px;font-size:12px}
+.foot{color:var(--dim);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}

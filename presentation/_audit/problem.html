@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Problem Breakdown · Enterprise IT-Ops &amp; Employee Support</title>
+<style>
+:root{--bg:#fafafa;--card:#ffffff;--line:#e5e7eb;--txt:#1a1a2e;--dim:#6b7280;--acc:#4338ca;--good:#166534;--warn:#b45309;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.6 'Space Grotesk',-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:26px;margin:0 0 4px} .sub{color:var(--dim);margin:0 0 24px}
+h2{font-size:15px;margin:32px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0}
+.card.surface{border-left:3px solid var(--dim)} .card.real{border-left:3px solid var(--acc)}
+.card h3{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
+.card p{margin:0;font-size:15px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+td.rank{color:var(--acc);font-weight:700;font-family:var(--mono)} td.sname{font-weight:600} td.ratio{font-weight:700;color:var(--acc);font-family:var(--mono)}
+td.snote{color:var(--dim)} .first{background:#eef2ff;color:var(--acc);font-size:11px;padding:2px 7px;border-radius:6px;margin-left:6px;font-weight:700}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cols .card.fit{border-left:3px solid var(--good)} .cols .card.not{border-left:3px solid var(--warn)}
+ul{margin:6px 0 0;padding-left:18px} li{margin:5px 0}
+.build{background:#f4f4fb;border:1px solid var(--acc);border-radius:12px;padding:16px 18px;margin:12px 0}
+.build b{color:var(--acc)}
+.foot{color:var(--dim);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
+@media(max-width:720px){.cols{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<h1>Problem Breakdown — Enterprise IT-Ops &amp; Employee Support</h1>
+<p class="sub">What an FDE establishes before writing code: the real problem, ranked surfaces, the AI boundary, and the first thing to build. Ranking is computed from impact/effort.</p>
+
+<h2>Surface vs. real problem</h2>
+<div class="card surface"><h3>The surface ask</h3><p>“Build us a chatbot that answers employee IT questions.”</p></div>
+<div class="card real"><h3>The real problem</h3><p>The cost isn&#x27;t answering questions — it&#x27;s the human hours spent triaging and ACTING on them (resets, tickets, provisioning), and the risk when those actions skip policy. The real problem is safe, auditable REMEDIATION at scale, not FAQ deflection.</p></div>
+
+<h2>Surfaces ranked by impact ÷ effort</h2>
+<table>
+<tr><th>#</th><th>Surface</th><th>Impact</th><th>Effort</th><th>Ratio</th><th>Why</th></tr>
+<tr><td class="rank">1</td><td class="sname">Policy / runbook Q&amp;A <span class="first">build first</span></td><td>4</td><td>1</td><td class="ratio">4.00</td><td class="snote">Pure retrieval; grounded citations; zero side effects. Fastest safe win.</td></tr><tr><td class="rank">2</td><td class="sname">Access resets &amp; lockouts </td><td>5</td><td>2</td><td class="ratio">2.50</td><td class="snote">Highest volume, most mechanical, clear policy — but a side effect: must be approval-gated.</td></tr><tr><td class="rank">3</td><td class="sname">Ticket triage &amp; filing </td><td>4</td><td>2</td><td class="ratio">2.00</td><td class="snote">Routes to the right queue with a drafted summary; human approves the file.</td></tr><tr><td class="rank">4</td><td class="sname">Resource provisioning </td><td>3</td><td>3</td><td class="ratio">1.00</td><td class="snote">License/VM/group grants — high blast radius, needs change-control + approval.</td></tr><tr><td class="rank">5</td><td class="sname">Proactive incident detection </td><td>4</td><td>5</td><td class="ratio">0.80</td><td class="snote">Valuable but needs telemetry integration + eval data we don&#x27;t have yet. Later rung.</td></tr>
+</table>
+
+<h2>Where AI fits — and where it must not</h2>
+<div class="cols">
+  <div class="card fit"><h3>✅ Where AI fits</h3><ul><li>Retrieval + grounded answers over policy/runbooks (citations = only legal sources).</li><li>Drafting the remediation (ticket text, reset request) for a human to approve.</li><li>Classifying/routing intent to the right queue and tenant.</li><li>Recalling per-employee context from prior sessions (scoped memory).</li></ul></div>
+  <div class="card not"><h3>⛔ Where it must NOT</h3><ul><li>Execute any side effect (reset/provision/ticket) without human approval — HITL, always (J-07).</li><li>Answer beyond retrieved evidence — ungrounded =&gt; capped confidence or refuse (J-06).</li><li>Cross tenant/clearance boundaries — isolation is a filter before ranking, not a soft boost.</li><li>Touch OT/SCADA or safety-critical access without change-control.</li></ul></div>
+</div>
+
+<h2>Success criteria</h2>
+<div class="card"><ul><li>Deflection with SAFETY: deterministic scorers (schema, PII, grounding, HITL) at 1.00 — non-negotiable.</li><li>Median request resolved with ≤ 1 human approval click, full trace + citations.</li><li>Zero cross-tenant leaks and zero raw-PII egress in the eval set (adversarial slice included).</li><li>Measured hours saved on the top-two surfaces vs. the current triage baseline.</li></ul></div>
+
+<h2>Build first</h2>
+<div class="build"><p><b>Policy / runbook Q&amp;A</b> — Start where impact/effort is highest AND the safety story is cleanest, then add one side-effecting surface behind the approval node to prove the HITL loop end-to-end.</p></div>
+
+<div class="foot">Generated 2026-08-24 02:40 UTC · Reproduce: <code>python -m evals.problem_report</code> ·
+Ranking computed from impact÷effort; the "build first" pick is derived, not asserted.</div>
+</div></body></html>

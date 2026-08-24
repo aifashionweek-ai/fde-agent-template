@@ -1,0 +1,57 @@
+===== VISIBLE TEXT (business) =====
+
+Business analytics — scoping brief
+← back to hub
+Business analytics — scoping brief
+Enterprise IT-Ops & Employee Support agent · surface ask → real problem → where AI fits.
+PLACEHOLDER scaffold (public-safe, generic procurement framing). Replace with the
+handed-in presentation/business-analytics.html ; the /business route serves
+whatever is at that path.
+Surface ask vs. real problem
+The surface ask
+"Give employees a chatbot for IT/HR questions so the helpdesk queue shrinks."
+The real problem
+The queue is expensive because answering requires acting — resetting access, filing
+tickets, provisioning — and every action carries blast radius, tenant/clearance boundaries, and an
+audit obligation. A read-only bot deflects the easy half and leaves the costly half untouched.
+Where AI fits — and where it must not
+Capability AI role Boundary
+Answer from runbooks/policy Lead — routed, cited RAG tenant + clearance filtered before ranking; cite only retrieved ids
+Propose a remediation Lead — plan → act allowlisted tools; bounded loop
+Authorize an action Never the model deterministic authorize() , before the human gate
+Execute a side effect Never un-approved human-in-the-loop; approval bound to a proposal hash
+Decide what's true Not from retrieved text retrieved content is data, never instructions
+Success criteria (what "it works" means)
+Safe to leave running: every safety property is a tested invariant; the deploy blocks if one regresses.
+Deflection with action: resolves the acting half under human approval, not just the answering half.
+Provable: every run is traced with its node path, tokens, and control status; approvals are auditable.
+Portable: a new domain is four slots (golden set → corpus → tools → output contract); governance unchanged.
+Build-first (impact ÷ effort)
+FIRST the control plane — authz, tenant isolation, approval binding, injection-inert retrieval.
+THEN quality — retrieval recall, groundedness, model selection.
+Rationale: the differentiator isn't answering (everyone ships that) — it's being
+bounded and continuously proven . See the problem breakdown and
+multilayer audit for the computed version of this ranking.
+
+===== <style> BLOCK(S) (business) =====
+
+:root { --ink:#1a1a2e; --mut:#6b7280; --line:#e5e7eb; --accent:#4338ca; --bg:#fafafa;
+          --good:#166534; --good-bg:#f0fdf4; --warn:#b45309; --warn-bg:#fffbeb; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.6 'Space Grotesk',-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); }
+  main { max-width:820px; margin:0 auto; padding:28px 18px 80px; }
+  a.back { color:var(--accent); text-decoration:none; font-size:13px; }
+  h1 { font-size:22px; margin:6px 0 2px; } .sub { color:var(--mut); margin-bottom:22px; }
+  h2 { font-size:15px; margin:26px 0 8px; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:12px 0; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .k { font-weight:700; } ul { margin:6px 0 0; padding-left:20px; } li { margin:3px 0; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; font-size:14px; }
+  th { text-align:left; color:var(--mut); border-bottom:1px solid var(--line); padding:6px 8px; }
+  td { padding:6px 8px; border-bottom:1px solid #f3f4f6; vertical-align:top; }
+  .good { color:var(--good); } .must-not { color:#991b1b; }
+  .pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
+  .pill.good { background:var(--good-bg); } .pill.warn { background:var(--warn-bg); color:var(--warn); }
+  .ph { background:var(--warn-bg); border:1px solid #fcd34d; color:var(--warn); border-radius:10px;
+        padding:10px 14px; font-size:13px; margin-bottom:18px; }
+  @media (max-width:640px){ .grid{grid-template-columns:1fr} }

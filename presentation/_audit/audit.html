@@ -1,0 +1,188 @@
+<!doctype html><html><head><meta charset="utf-8"><title>FDE Agent · Audit</title>
+<style>
+:root{--bg:#fafafa;--card:#ffffff;--line:#e5e7eb;--txt:#1a1a2e;--dim:#6b7280;--acc:#4338ca;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.6 'Space Grotesk',-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:26px;margin:0 0 4px} .sub{color:var(--dim);margin:0 0 24px}
+.verdict{display:inline-block;padding:6px 14px;border-radius:8px;font-weight:700;color:#fff;font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 28px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px}
+.chip b{color:var(--acc)}
+h2{font-size:15px;margin:32px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc)}
+.layer{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+.layer summary{cursor:pointer;padding:14px 16px;font-weight:600;list-style:none;display:flex;align-items:center;gap:10px}
+.layer summary::-webkit-details-marker{display:none}
+.lic{font-size:18px}.lid{color:var(--acc);font-weight:700;font-size:13px;background:#eef2ff;padding:2px 8px;border-radius:6px;font-family:var(--mono)}
+.chev{margin-left:auto;color:var(--dim)} details[open] .chev{transform:rotate(180deg)}
+.body{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:0 16px 18px}
+.body h4{margin:14px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
+.body p{margin:0;font-size:14px} .alt{color:var(--dim)}
+table.ev,table.slices{width:100%;border-collapse:collapse;font-size:13px}
+table.ev td{padding:4px 0} .noev{color:var(--dim);font-style:italic}
+.bar{position:relative;background:#eef2ff;border:1px solid var(--line);border-radius:5px;height:20px;min-width:120px}
+.bar .fill{height:100%;border-radius:4px} .bar span{position:absolute;right:6px;top:0;font-size:11px;line-height:20px;color:var(--txt);font-family:var(--mono)}
+ul.manifest{margin:6px 0 0;padding-left:18px} ul.manifest li{font-size:12px;margin:3px 0}
+.ok{color:#166534} .bad{color:#991b1b;font-weight:600} .sl{font-weight:600;color:var(--acc)}
+table.facts td{padding:4px 0;font-size:12px} table.bakeoff td,table.bakeoff th{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}
+table.slices th,table.slices td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}
+.docs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px} .doc{background:#eef2ff;color:var(--acc);text-decoration:none;padding:5px 10px;border-radius:6px;font-size:12px}
+.foot{color:var(--dim);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
+</style></head><body><div class="wrap">
+<h1>FDE Agent — Multilayer Audit</h1>
+<p class="sub">Enterprise IT-Ops & Employee Support agent · every number below is read from a real log, git, or a live pytest run. No asserted greens.</p>
+<span class="verdict" style="background:#16a34a">PASS · 173 pass · 0 fail</span>
+<div class="meta">
+  <div class="chip">tests <b>173/173</b></div>
+  <div class="chip">last <b>173 passed in 7.02s</b></div>
+  <div class="chip">git <b>feat/presentation@a8542a7</b></div>
+  <div class="chip">tools <b>9</b> (HITL-gated actions)</div>
+  <div class="chip">manifest rows <b>45</b></div>
+  <div class="chip">eval model <b>claude-sonnet-api</b></div>
+  <div class="chip">judges <b>factual, rubric_pass</b></div>
+  <div class="chip">generated <b>2026-08-24 02:43 UTC</b></div>
+</div>
+
+<h2>The 10 layers — what, why, alternatives, evidence</h2>
+<p class="sub">Click any layer to drill down. Evidence bars are scorer means from the latest eval run (bake-claude).</p>
+
+        <details class="layer">
+          <summary><span class="lic">🛡️</span> <span class="lid">L1</span> Guardrails (6 layers)
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>Layered input/output safety: regex PII+injection, Presidio, Prompt-Guard/Lakera, Bedrock Guardrails, output grounding, HITL.</p>
+              <h4>Why this choice</h4><p>Deterministic where possible (free, fast, testable), model-judged only where necessary, humans on the residual. Each layer is a tested invariant, not a prompt.</p>
+              <h4>Alternatives considered</h4><p class="alt">LLM-judge-everything (slow, non-deterministic, costly) · a single vendor guardrail (vendor lock, misses tool-level risks) · no guardrails (unshippable).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <table class="ev"><tr><td>injection_refused</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr><tr><td>no_raw_pii</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr><tr><td>grounded</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr></table>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-005</b> Input + output PII redaction; prompt-injection detection (layered) <span class="ok">✓ tests/test_guards.py</span></li><li><b>D-012</b> Output is GROUNDED: citations ⊆ retrieved ids; ungrounded → capped confidence or reject <span class="ok">✓ tests/test_guards.py</span></li></ul></div>
+          </div>
+        </details>
+
+        <details class="layer">
+          <summary><span class="lic">🔎</span> <span class="lid">L2</span> Routed Retrieval
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>Provenance per chunk; tenant + 4-tier sensitivity + source filters applied BEFORE ranking; hybrid BM25+embeddings; ids are the only legal citations.</p>
+              <h4>Why this choice</h4><p>Security must be STRUCTURAL. A filter can&#x27;t be out-ranked; a soft boost can. Multi-tenant isolation and clearance ceilings are enforced, not hoped for.</p>
+              <h4>Alternatives considered</h4><p class="alt">Score-then-filter (leakable) · single-tenant index per customer (cost, ops) · pure vector search (misses exact ids/SKUs; no clearance model).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <table class="ev"><tr><td>grounded</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr></table>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-010</b> Every retrieved chunk carries provenance (doc, source, tenant, sensitivity, time) <span class="ok">✓ tests/test_retrieval.py</span></li><li><b>D-011</b> Retrieval is ROUTED: tenant isolation + sensitivity ceiling + source allow-list, applied b <span class="ok">✓ tests/test_retrieval.py</span></li></ul></div>
+          </div>
+        </details>
+
+        <details class="layer">
+          <summary><span class="lic">🧠</span> <span class="lid">L3</span> Agentic Memory (3 kinds)
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>Short-term (checkpointed thread), long-term semantic + episodic (tenant+user scoped, injected before planning, approval-gated writes, TTL, forget()).</p>
+              <h4>Why this choice</h4><p>Most &#x27;agents&#x27; are stateless. Real agents remember safely: memory is customer data — structurally isolated, provenance-stamped, forgettable. Writes are decisions (approval-gated).</p>
+              <h4>Alternatives considered</h4><p class="alt">No memory (re-asks everything) · stuff-everything-in-context (cost, leakage) · unscoped global memory (cross-tenant leak).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <table class="ev"><tr><td colspan="2" class="noev">No eval scorer maps directly — evidence via tests + manifest below</td></tr></table>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-016</b> Long-term memory: facts persist across threads/sessions, injected as context, upsert by (s <span class="ok">✓ tests/test_memory.py</span></li><li><b>D-017</b> Memory is customer data: tenant+user isolation is structural, provenance recorded, right-t <span class="ok">✓ tests/test_memory.py</span></li><li><b>D-018</b> Memory WRITES are side effects: remember/human_handoff gated through approval (HITL) <span class="ok">✓ tests/test_guards.py</span></li></ul></div>
+          </div>
+        </details>
+
+        <details class="layer">
+          <summary><span class="lic">🔧</span> <span class="lid">L4</span> Tools &amp; Human-in-the-Loop
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>9 tools: read (search/lookup/recall/calc) with no approval; action (reset_access/create_ticket/provision/remember/escalate) gated through a human approval node.</p>
+              <h4>Why this choice</h4><p>An agent that answers is useful; one that ACTS is valuable — but every side effect must be human-approved. Unknown tool -&gt; approval by default; strict mode raises on drift.</p>
+              <h4>Alternatives considered</h4><p class="alt">Read-only agent (no real work) · auto-execute actions (dangerous) · approve-everything (useless friction).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <table class="ev"><tr><td>hitl_respected</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr><tr><td>tool_allowlist</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr><tr><td>within_budget</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr></table>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-003</b> Tools are allowlisted; unknown tool call = hard reject <span class="ok">✓ tests/test_guards.py</span></li><li><b>D-004</b> Destructive/side-effect tools require human approval (interrupt) <span class="ok">✓ tests/test_guards.py</span></li><li><b>D-007</b> Cost/latency/tool-call budget per run; abort past budget <span class="ok">✓ tests/test_guards.py</span></li></ul></div>
+          </div>
+        </details>
+
+        <details class="layer">
+          <summary><span class="lic">⚖️</span> <span class="lid">L5</span> Model Selection (open vs closed)
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>Constraint-driven registry: select_model(task, residency, cost, quality, license). Anthropic API + Bedrock (Claude closed; Qwen/Llama open, in-account) + HF. Fine-tune path via LoRA + Bedrock Custom Model Import.</p>
+              <h4>Why this choice</h4><p>The governance layer bounds worst-case behavior INDEPENDENT of model choice — the deterministic controls run outside the model and hold across Claude/Qwen/Llama — so model selection is a pure quality/cost/residency decision, not a safety one. Separate &#x27;can we use it&#x27; (residency/license/cost) from &#x27;is it good&#x27; (our evals).</p>
+              <h4>Alternatives considered</h4><p class="alt">One hardcoded model (no residency story) · always-open (quality risk on reasoning) · always-closed (cost, lock-in, no in-account option for regulated data).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <p class="ok" style="font-weight:700;margin:0 0 6px">9 deterministic scorers · 1.00 across ALL 3 models ✓</p><table class="slices bakeoff"><tr><th>scorer</th><th>Claude Haiku 4.5 (closed/API)</th><th>Qwen3-32B (open/Bedrock)</th><th>Llama3.3-70B (open/Bedrock)</th></tr><tr><td class="sl">schema_valid</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td></tr><tr><td class="sl">tool_allowlist</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td></tr><tr><td class="sl">within_budget</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td></tr><tr><td class="sl">injection_refused</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td></tr><tr><td class="sl">no_raw_pii</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td></tr><tr><td class="sl">grounded</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td></tr><tr><td class="sl">hitl_respected</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td></tr><tr><td class="sl">path_sane</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td></tr><tr><td class="sl">confidence_reported</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td></tr></table><p class="alt" style="margin-top:4px">source: model-eval-2026-08-19.md</p>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-008</b> Model is swappable via env (Anthropic / Bedrock / HF) behind one interface <span class="ok">✓ agent/llm.py · agent/models.py</span></li><li><b>D-009</b> Model SELECTION is constraint-driven and deterministic (residency, cost, quality, task, li <span class="ok">✓ tests/test_models.py</span></li></ul></div>
+          </div>
+        </details>
+
+        <details class="layer">
+          <summary><span class="lic">📡</span> <span class="lid">L6</span> Tracing
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>LangSmith with tenant/model/sha metadata; the node PATH (incl tool names) is carried in every result and scored (path_sane).</p>
+              <h4>Why this choice</h4><p>You can&#x27;t operate what you can&#x27;t see. AI-native tracing shows prompts, tool I/O, tokens, and the path — turning prod traces into new eval rows.</p>
+              <h4>Alternatives considered</h4><p class="alt">HTTP-span APM only (blind to prompts/tools) · no tracing (undebuggable) · logs-only (no structure, no path).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <table class="ev"><tr><td>path_sane</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr></table>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-006</b> Every run is traced (LangSmith) and scored (Braintrust) <span class="ok">✓ evals/run_evals.py · agent/tracing.py</span></li><li><b>D-013</b> Every result carries its own trace path (node sequence); path must start at guard_input <span class="ok">✓ tests/test_evals_meta.py</span></li></ul></div>
+          </div>
+        </details>
+
+        <details class="layer">
+          <summary><span class="lic">✅</span> <span class="lid">L7</span> Evals &amp; Regression Gate
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>Golden set with slices; deterministic scorers at 1.0, two independent LLM judges (Claude+GPT) with agreement + calibration; gate blocks on regression, runs OFFLINE from a results file.</p>
+              <h4>Why this choice</h4><p>&#x27;The evals passed&#x27; must MEAN something: invariants at 1.0, judges measured against each other, per-slice regression gate, never pass on missing rows. Braintrust is the dashboard; a committed file is the contract.</p>
+              <h4>Alternatives considered</h4><p class="alt">Vibe-check (no signal) · single judge (unmeasured) · online-only gate (network-coupled CI) · pass-on-average (hides slice regressions).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <table class="ev"><tr><td>schema_valid</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr><tr><td>confidence_reported</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr></table>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-014</b> Eval confidence: calibration (ECE) + two-judge agreement + per-slice regression gate <span class="ok">✓ tests/test_evals_meta.py · evals/gate.py</span></li></ul></div>
+          </div>
+        </details>
+
+        <details class="layer">
+          <summary><span class="lic">🔌</span> <span class="lid">L8</span> MCP Integration
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>Expose the agent&#x27;s READ tools to MCP clients (Claude Desktop, IDEs, other agents) and consume customer MCP servers — everything flows through the SAME guards + HITL. Published set is derived from the tool registry; action tools are never exposed.</p>
+              <h4>Why this choice</h4><p>MCP hands tools to a client we don&#x27;t govern, so only reads (tenant/clearance-scoped inside themselves) are safe to publish. A side effect is a decision — it stays behind the approval node. The server refuses to boot if an action tool ever looks read-only (fail loud).</p>
+              <h4>Alternatives considered</h4><p class="alt">Expose all tools over MCP (a client could fire side effects unapproved) · a bespoke non-standard API (no interop) · no MCP (agent can&#x27;t compose with the customer&#x27;s other agents).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <table class="ev facts"><tr><td>READ tools published over MCP</td><td class="ok">4: search_policy, lookup_employee, recall_memory, calculate ✓</td></tr><tr><td>action tools withheld (stay behind HITL)</td><td class="ok">5: create_ticket, escalate_to_human, provision_resource, remember, reset_access ✓</td></tr><tr><td>side-effect tool exposed over MCP</td><td class="ok">none — by construction ✓</td></tr></table>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-025</b> MCP server publishes READ tools ONLY; the 5 action tools are never exposed and stay behind <span class="ok">✓ tests/test_mcp.py</span></li></ul></div>
+          </div>
+        </details>
+
+        <details class="layer">
+          <summary><span class="lic">🧩</span> <span class="lid">L9</span> Vector Backend (swappable)
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>The retrieval contract search(query, tenant, sensitivity, k) is backend-swappable: in-memory BM25 by default (zero-setup), Pinecone via VECTOR_BACKEND=pinecone — namespace-per-tenant, sensitivity as a query-time metadata filter. Callers never branch on the backend.</p>
+              <h4>Why this choice</h4><p>Meet the customer&#x27;s data where it already lives (Pinecone/Databricks/Snowflake/pgvector) without changing the agent. Tenant isolation stays structural (a query hits ONE namespace); the contract is the seam, so the store is a config choice, not a rewrite.</p>
+              <h4>Alternatives considered</h4><p class="alt">Hardcode one vector DB (rewrite per customer) · move customer data into our store (residency/governance nightmare) · post-hoc filtering (leakable, not structural).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <table class="ev facts"><tr><td>default backend (zero-setup)</td><td class="ok">in-memory ✓</td></tr><tr><td>VECTOR_BACKEND=pinecone → PineconeIndex</td><td class="ok">yes ✓</td></tr><tr><td>search() contract identical across backends</td><td class="ok">yes ✓</td></tr></table>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-024</b> Pinecone vector backend behind UNCHANGED search() contract (VECTOR_BACKEND=pinecone): name <span class="ok">✓ tests/test_retrieval_backend.py</span></li></ul></div>
+          </div>
+        </details>
+
+        <details class="layer">
+          <summary><span class="lic">🚀</span> <span class="lid">L10</span> Infra / Deployment
+            <span class="chev">▾</span></summary>
+          <div class="body">
+            <div class="col"><h4>What</h4><p>deploy/ ships three runnable paths: Dockerfile (container/App Runner), template.yaml (AWS SAM → Lambda), hf_endpoint.py (HF Inference Endpoint for open weights). Bedrock runs models in-account for residency.</p>
+              <h4>Why this choice</h4><p>Forward-deployed means it has to RUN in the customer&#x27;s environment in hours, inside their compliance boundary. Serverless for the API, in-account Bedrock for regulated inference, self-hosted HF for open weights — the residency story is backed by real deploy artifacts, not a diagram.</p>
+              <h4>Alternatives considered</h4><p class="alt">A notebook demo (never ships) · one cloud only (no residency options) · vendor API only (no in-account path for regulated data).</p></div>
+            <div class="col"><h4>Evidence (from latest eval: bake-claude)</h4>
+              <table class="ev facts"><tr><td>container → App Runner</td><td class="ok">deploy/Dockerfile ✓</td></tr><tr><td>AWS SAM → Lambda</td><td class="ok">deploy/template.yaml ✓</td></tr><tr><td>HF Inference Endpoint (open weights)</td><td class="ok">deploy/hf_endpoint.py ✓</td></tr></table>
+              <h4>Governed by</h4><ul class="manifest"><li><b>D-027</b> Safety/tracing/infra consolidated: 6 guard layers (deterministic-first), egress PII on EVE <span class="ok">✓ docs/14-safety-tracing-infra.md</span></li></ul></div>
+          </div>
+        </details>
+
+<h2>Eval scores by slice</h2>
+<table class='slices'><tr><th>slice</th><th>confidence_reported</th><th>factual</th><th>grounded</th><th>hitl_respected</th><th>injection_refused</th><th>no_raw_pii</th><th>path_sane</th><th>rubric_pass</th><th>schema_valid</th><th>tool_allowlist</th><th>within_budget</th></tr><tr><td class="sl">adversarial</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:80%;background:#ca8a04"></div><span>80%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr><tr><td class="sl">happy</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr><tr><td class="sl">pii</td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td><td><div class="bar"><div class="fill" style="width:100%;background:#16a34a"></div><span>100%</span></div></td></tr></table>
+<p class="sub" style="margin-top:10px">Deterministic scorers (schema, PII, grounding, HITL, budget, path) are the safety <b>invariants</b> — they must read 1.00, and <b>grounding at 1.00 is the real correctness signal</b> (every citation ⊆ retrieved evidence). <code>factual</code> and <code>rubric_pass</code> are LLM-judge <i>quality</i> scores: a correctness rubric that rewards a right answer regardless of extra helpful detail, and still fails a wrong one. Some judge strictness is inherent — treat these as nuance, not pass/fail; the invariants above are pass/fail.</p>
+
+<h2>Design deep-dives</h2>
+<p class="sub">Each layer has a full playbook:</p>
+<div class="docs"><a href="../../docs/01-model-selection.md" class="doc">01-model-selection</a><a href="../../docs/02-bedrock.md" class="doc">02-bedrock</a><a href="../../docs/03-retrieval-and-customer-data.md" class="doc">03-retrieval-and-customer-data</a><a href="../../docs/04-guardrails.md" class="doc">04-guardrails</a><a href="../../docs/05-evals-braintrust.md" class="doc">05-evals-braintrust</a><a href="../../docs/06-tracing-langsmith.md" class="doc">06-tracing-langsmith</a><a href="../../docs/07-huggingface-deploy.md" class="doc">07-huggingface-deploy</a><a href="../../docs/08-tuning.md" class="doc">08-tuning</a><a href="../../docs/09-fde-playbook.md" class="doc">09-fde-playbook</a><a href="../../docs/10-agentic-memory.md" class="doc">10-agentic-memory</a><a href="../../docs/12-data-platforms.md" class="doc">12-data-platforms</a><a href="../../docs/13-mcp-integration.md" class="doc">13-mcp-integration</a><a href="../../docs/14-safety-tracing-infra.md" class="doc">14-safety-tracing-infra</a><a href="../../docs/ARCHITECTURE.md" class="doc">ARCHITECTURE</a><a href="../../docs/DEMO-RUNBOOK.md" class="doc">DEMO-RUNBOOK</a><a href="../../docs/DEMO-TEMPLATE.md" class="doc">DEMO-TEMPLATE</a><a href="../../docs/HARDENING-BACKLOG.md" class="doc">HARDENING-BACKLOG</a><a href="../../docs/INGESTION-PROOF.md" class="doc">INGESTION-PROOF</a><a href="../../docs/LOOM-SCRIPT.md" class="doc">LOOM-SCRIPT</a><a href="../../docs/PRESENTATION.md" class="doc">PRESENTATION</a><a href="../../docs/REHEARSAL.local.md" class="doc">REHEARSAL.local</a><a href="../../docs/SESSION-HANDOFF.md" class="doc">SESSION-HANDOFF</a><a href="../../docs/model-eval-2026-08-19.md" class="doc">model-eval-2026-08-19</a></div>
+
+<div class="foot">Reproduce: <code>python -m evals.audit_report</code> · Tests: <code>python update.py --check</code> ·
+Every verdict computed from results.sqlite-equivalent (evals/results/*.json), git, and a live pytest run — not remembered.</div>
+</div></body></html>

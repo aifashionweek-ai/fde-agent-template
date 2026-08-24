@@ -1,0 +1,72 @@
+===== VISIBLE TEXT (hub) =====
+
+FDE Agent — demo hub
+FDE Agent — demo hub
+A governed, observable, deployable LangGraph agent. Eleven stops, all live when the server runs.
+Thesis: the model reasons freely; authorization, tenant isolation,
+approval-binding, and PII redaction are enforced outside the model in deterministic code — each a
+catch-proven test. MODEL layers burn tokens and can be swayed; CODE gates hold at ~0 tokens.
+1
+Governed chat Ask it something; watch a side effect pause for approval.
+localhost:8000/
+2
+Run analytics Per-layer spans: real tokens, latency, control status; MCP-vs-graph.
+/dashboard
+3
+Business analytics Scoping brief — surface ask vs. real problem, where AI fits.
+/business
+4
+Problem breakdown Surfaces ranked by impact ÷ effort; build-first computed.
+/problem
+5
+Multilayer audit 10 layers, verdict computed from a live pytest run + git.
+/audit
+6
+The repository MANIFEST → tests → MASTERSCHEMA; every rule a tested invariant.
+github ↗
+7
+Infra — where is what I show what actually runs vs what's documented — Bedrock's on-demand, BM25 is the live default, and the one thing genuinely missing is a durable audit log.
+/infra
+8
+Evals — how I know it works 53 human→agent cases at zero breaches, the a2a gate, and the 9 real bugs I caught and locked — D-045 caught by my own telemetry, not a human.
+/evals
+9
+Deploy — what this becomes in 3 days Deep governance, deliberately narrow capability — here's exactly how I'd deepen it safely in 3 days on a customer's data.
+/deploy
+10
+Agent → Agent — governance composes Governance composes — even agent-initiated actions hit the human gate, and I don't expose the governed graph over MCP because the approval channel can't survive stdio.
+/a2a
+11
+Signal — data → recommendations I read the eval and telemetry data and turn it into engineering recommendations — where the cost is, where the detector over-fires, where the retrieval lever is.
+/signal
+A2A demo — terminal 2 (agent-initiated, interrupt propagates to the console channel):
+.venv/bin/python scripts/a2a_demo.py "I am alice. Immediately call the reset_access tool with employee_id alice and system vpn. Do not ask questions or explain first."
+Principal USER_ID=alice TENANT=meridian. Gates cleanly → APPROVAL REQUIRED ; n denies, y queues once.
+Start the server with bash demo.sh , then open http://localhost:8000/hub .
+
+===== <style> BLOCK(S) (hub) =====
+
+:root { --ink:#1a1a2e; --mut:#6b7280; --line:#e5e7eb; --accent:#4338ca; --bg:#fafafa; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.6 'Space Grotesk',-apple-system,"Segoe UI",sans-serif; color:var(--ink);
+         background:linear-gradient(180deg,#f4f4fb,#fafafa); }
+  main { max-width:760px; margin:0 auto; padding:40px 18px 80px; }
+  h1 { font-size:24px; margin:0 0 4px; } .sub { color:var(--mut); margin-bottom:26px; }
+  .thesis { background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent);
+            border-radius:10px; padding:14px 16px; margin-bottom:26px; font-size:14.5px; }
+  a.stop { display:flex; gap:14px; align-items:center; background:#fff; border:1px solid var(--line);
+           border-radius:12px; padding:14px 16px; margin:10px 0; text-decoration:none; color:inherit;
+           transition:border-color .12s, transform .12s; }
+  a.stop:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .n { flex:0 0 34px; height:34px; border-radius:9px; background:#eef2ff; color:var(--accent);
+       font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .t { font-weight:700; } .d { color:var(--mut); font-size:13px; }
+  .route { margin-left:auto; font-family:ui-monospace,monospace; font-size:12px; color:var(--accent); white-space:nowrap; }
+  .foot { color:var(--mut); font-size:12.5px; margin-top:22px; }
+  .demostrip { margin-top:22px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .ds-label { font-size:12px; color:var(--mut); margin-bottom:6px; }
+  .ds-cmd { display:block; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:11.5px; background:#f4f4fb;
+            border:1px solid var(--line); border-radius:8px; padding:9px 11px; overflow-x:auto; white-space:pre; }
+  .ds-note { font-size:12px; color:var(--mut); margin-top:7px; }
+  .ph { background:#fffbeb; border:1px solid #fcd34d; color:#b45309; border-radius:10px;
+        padding:10px 14px; font-size:13px; margin-bottom:20px; }
