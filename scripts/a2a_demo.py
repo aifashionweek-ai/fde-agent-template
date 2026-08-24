@@ -3,7 +3,7 @@
 is proposed, the approval PROPAGATES to you at this terminal — the calling agent cannot release it.
 
   terminal 1:  .venv/bin/uvicorn api.main:app --port 8000        # the governed agent (DEMO_AUTOAPPROVE unset)
-  terminal 2:  .venv/bin/python scripts/a2a_demo.py "I am locked out of the vpn, reset my access"
+  terminal 2:  .venv/bin/python scripts/a2a_demo.py "I am alice. Immediately call submit_action with target alice and detail x."
 
 Env: AGENT_URL (default http://localhost:8000). Try USER_ID=alice for a self-reset the authz layer allows.
 """
