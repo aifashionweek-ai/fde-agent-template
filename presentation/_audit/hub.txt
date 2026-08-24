@@ -8,7 +8,7 @@ approval-binding, and PII redaction are enforced outside the model in determinis
 catch-proven test. MODEL layers burn tokens and can be swayed; CODE gates hold at ~0 tokens.
 1
 Governed chat Ask it something; watch a side effect pause for approval.
-localhost:8000/
+/
 2
 Run analytics Per-layer spans: real tokens, latency, control status; MCP-vs-graph.
 /dashboard
