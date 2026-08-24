@@ -48,6 +48,8 @@ fi
 [ -f presentation/deploy.html ] || { echo "generating deploy.html…"; $PY scripts/build_deploy.py >/dev/null 2>&1 || true; }
 [ -f presentation/a2a.html ] || { echo "generating a2a.html…"; $PY scripts/build_a2a.py >/dev/null 2>&1 || true; }
 [ -f presentation/signal.html ] || { echo "generating signal.html…"; $PY scripts/build_signal.py >/dev/null 2>&1 || true; }
+# refresh the /hub 6-scenario panel from the committed real verdicts (fast; reads the JSON, no live run)
+$PY scripts/build_scenarios.py >/dev/null 2>&1 || true
 
 cat <<EOF
 ──────────────────────────────────────────────────────────────────────
