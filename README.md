@@ -1,11 +1,55 @@
 # FDE Agent Template — SKELETON
 
-A governed, observable, deployable **LangGraph agent** for forward-deployed work — stripped to the
-**reusable frame + four fill-slots**. The point isn't a domain: it's that every safety/quality property is
-a **tested invariant**, and a new engagement is done by filling **4 slots**, leaving everything else
-untouched.
+A governed, observable, deployable **LangGraph agent** you fill in 4 slots — where every safety property
+(human-approval on side effects, tenant/authz isolation, injection-inert retrieval) is a **tested invariant**,
+not a hope.
 
-Clone this, fill the slots (see `docs/BUILD-ORDER.md`), ship.
+## Quickstart (≈5 minutes, from a cold clone)
+
+Copy-paste, in order. Needs **Python 3.11+** and `git`. (These exact steps were run from a fresh clone on
+Python 3.12.)
+
+```bash
+git clone --branch template-skeleton --single-branch \
+  https://github.com/aifashionweek-ai/fde-agent-template.git fde-agent
+cd fde-agent
+
+python3.11 -m venv .venv && source .venv/bin/activate   # any 3.11+ interpreter (python3.12 works)
+pip install -r requirements.txt                         # ~15s, no build steps
+
+export ANTHROPIC_API_KEY=sk-ant-...                     # get one at https://console.anthropic.com
+make demo                                               # serves http://localhost:8000/
+```
+
+Shortcut for the two venv/install lines: `make setup` (add `PY=python3.11` to pick the interpreter), then
+`source .venv/bin/activate`.
+
+**No API key?** You can still prove the whole system offline — skip the `export` and run **`make check`**
+(36 tests: the approval gate, authz-before-gate, injection refusal, grounding, MCP read-only). `make demo`
+without a key exits with a one-line "set ANTHROPIC_API_KEY (or configure Bedrock)" message — never a traceback.
+
+## What you'll see
+
+`make demo` serves a governed chat at **http://localhost:8000/**. Two things to try:
+
+- **Ask a question (a read):** e.g. *"What does the knowledge base say the process requires?"* → you get an
+  answer with **citations** and a **confidence**. No approval needed — reads are safe.
+- **Ask for an action (a side effect):** e.g. *"submit an action for alice"* → the run **pauses at an
+  approval gate**: the UI shows the exact tool call + a **proposal hash**, and waits for your Approve/Deny.
+  Nothing executes until you approve. That pause is the whole point — *agent proposes, human disposes.*
+
+Verified live: a side-effect request returns `status: interrupted` with the pending `submit_action` call and
+its proposal hash; approving it (bound to that hash) executes it, a tampered hash is `REFUSED`.
+
+## Prerequisites (honest)
+
+- **Python 3.11 or newer** (verified on 3.12). `git`. macOS/Linux.
+- **A model credential is required for the live chat demo** — `ANTHROPIC_API_KEY`, or Bedrock
+  (`BEDROCK_MODEL_ID` + AWS creds + `LLM_PROVIDER=bedrock`). Without one, `make demo` prints how to set it and
+  exits cleanly; **`make check` runs fully offline with no key.**
+- No Docker, no services, no build toolchain. `pip install -r requirements.txt` is the only install.
+
+---
 
 ## What's in the box (the frame — generic, tested)
 
@@ -27,17 +71,17 @@ Plus a domain-agnostic **data-triage tool** (`tools/data_triage/`) — profile/s
 4. **SLOT 4 · Output contract** — `agent/state.py` `AgentOutput` + `agent/prompts.py` — shape the output.
 
 Everything else (graph, guards, authz, approval integrity, telemetry, eval gate, governance, api) stays
-untouched. Each slot is marked in-code with a `# SLOT N:` comment and a one-line how-to.
+untouched. Each slot is marked in-code with a `# SLOT N:` comment and a one-line how-to. Paste-and-adapt
+starters live in **`snippets/`**.
 
-## 60-second start
+## Common commands
 
 ```bash
-make setup        # deps + .env
-make check        # update.py: regen registry from MASTERSCHEMA, drift-check, run the frame tests (the gate)
-make run          # uvicorn api.main:app  → POST /run {"task":"..."}
+make check        # the gate: regen registry from MASTERSCHEMA, drift-check, run the frame tests (offline, no key)
+make demo         # serve the governed chat + approval gate on :8000 (needs a model key)
+make lint         # ruff + mypy (basic); config in pyproject.toml
+make mcp          # show what MCP would publish (read tools) vs withhold (action tools)
 ```
-
-`make check` runs with no keys. Add `ANTHROPIC_API_KEY` (local `.env`) for `/run` and evals.
 
 ## Governance in one picture
 

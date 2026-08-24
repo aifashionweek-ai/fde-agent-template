@@ -9,7 +9,21 @@ PY=.venv/bin/python
 
 # --- key: the API server does NOT load .env itself — source it here so uvicorn has the key ---
 if [ -f .env ]; then set -a; . ./.env; set +a; fi
-[ -n "${ANTHROPIC_API_KEY:-}" ] || { echo "ERROR: ANTHROPIC_API_KEY not set (add it to .env)"; exit 1; }
+if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${BEDROCK_MODEL_ID:-}${AWS_ACCESS_KEY_ID:-}" ]; then
+  cat >&2 <<'MSG'
+──────────────────────────────────────────────────────────────────────
+  No model credentials found — the live chat demo needs one to call a model.
+
+  Fix (pick one), then re-run `make demo`:
+    export ANTHROPIC_API_KEY=sk-ant-...        # get a key at https://console.anthropic.com
+    # …or configure Bedrock: set BEDROCK_MODEL_ID + AWS creds and LLM_PROVIDER=bedrock
+
+  No key handy? You can still prove the whole system OFFLINE (no network, no key):
+    make check      # 36 tests: approval gate, authz-before-gate, injection, grounding, MCP read-only
+──────────────────────────────────────────────────────────────────────
+MSG
+  exit 1
+fi
 
 # --- the demo is the APPROVAL GATE — refuse to run with the bypass on ---
 if [ "${DEMO_AUTOAPPROVE:-}" = "1" ]; then

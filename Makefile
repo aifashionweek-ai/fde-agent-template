@@ -1,5 +1,7 @@
 .PHONY: setup check lint evals evals-braintrust gate run demo demo-all deploy preflight hf smoke bakeoff harness mcp
-setup:     ; pip install -r requirements.txt && cp -n .env.example .env || true
+PY ?= python3     # override for a specific interpreter, e.g. `make setup PY=python3.11`
+# One-shot cold start: create .venv + install. Then `source .venv/bin/activate` and `make demo` (or `make check`).
+setup:     ; $(PY) -m venv .venv && .venv/bin/pip install -q --upgrade pip && .venv/bin/pip install -r requirements.txt && cp -n .env.example .env || true
 demo:      ; bash demo.sh
 demo-all:  ; bash scripts/run_all.sh $(ARGS)
 check:     ; python update.py --check
