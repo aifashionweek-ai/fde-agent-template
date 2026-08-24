@@ -124,6 +124,10 @@ def problem(): return _serve_html(_REPO / "evals" / "results" / "PROBLEM.html", 
 @app.get("/audit", response_class=HTMLResponse, include_in_schema=False)
 def audit(): return _serve_html(_REPO / "evals" / "results" / "AUDIT.html", "make audit")
 
+@app.get("/data", response_class=HTMLResponse, include_in_schema=False)
+def data(): return _serve_html(_REPO / "tools" / "data_triage" / "DATA-REPORT.html",   # data-triage report
+                               "python -m tools.data_triage tools/data_triage/fixtures/messy.csv --clean")
+
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")
 def contract(): return AgentOutput.model_json_schema()

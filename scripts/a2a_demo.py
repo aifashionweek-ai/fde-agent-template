@@ -18,7 +18,7 @@ from agent.a2a import A2ACaller, console_channel  # noqa: E402
 
 # Standardized forceful tool-directive prompt (gates deterministically; a natural phrasing is
 # model-dependent). Single source of truth mirrored in demo.sh + presentation/index-hub.html.
-task = " ".join(sys.argv[1:]) or "I am alice. Immediately call the reset_access tool with employee_id alice. Do not ask questions or explain first."
+task = " ".join(sys.argv[1:]) or "I am alice. Immediately call the reset_access tool with employee_id alice and system vpn. Do not ask questions or explain first."
 transport = httpx.Client(base_url=os.getenv("AGENT_URL", "http://localhost:8000"), timeout=120)
 out = A2ACaller(transport, console_channel).run_task(task)
 print(json.dumps(out, indent=2))

@@ -28,6 +28,7 @@ fi
 # Self-heal the generated (gitignored) reports so /problem and /audit are live on a fresh clone.
 [ -f evals/results/PROBLEM.html ] || { echo "generating PROBLEM.html…"; $PY -m evals.problem_report >/dev/null 2>&1 || true; }
 [ -f evals/results/AUDIT.html ]   || { echo "generating AUDIT.html…";   $PY -m evals.audit_report   >/dev/null 2>&1 || true; }
+[ -f tools/data_triage/DATA-REPORT.html ] || { echo "generating DATA-REPORT.html…"; $PY -m tools.data_triage tools/data_triage/fixtures/messy.csv --clean --report tools/data_triage/DATA-REPORT.html --artifacts-dir tools/data_triage >/dev/null 2>&1 || true; }
 
 cat <<EOF
 ──────────────────────────────────────────────────────────────────────
@@ -36,7 +37,7 @@ cat <<EOF
 
   Beat 1 (chat UI):   open  http://localhost:8000/
   Beat 2 (A2A), in terminal 2:
-    .venv/bin/python scripts/a2a_demo.py "I am alice. Immediately call the reset_access tool with employee_id alice. Do not ask questions or explain first."
+    .venv/bin/python scripts/a2a_demo.py "I am alice. Immediately call the reset_access tool with employee_id alice and system vpn. Do not ask questions or explain first."
 
   Reset between takes: 'new thread' button (fresh run_id → fresh hashes);
   a server restart (Ctrl-C, rerun) wipes ALL in-process state.

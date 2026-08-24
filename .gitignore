@@ -15,3 +15,11 @@ append_lesson.py
 # eval harness C: generated reports (keep one committed sample)
 evals/report/*
 !evals/report/sample.json
+
+# data-triage: generated outputs (the fixture stays committed)
+tools/data_triage/DATA-REPORT.html
+tools/data_triage/*.profile.json
+tools/data_triage/*.findings.json
+tools/data_triage/*.clean_log.json
+tools/data_triage/*.cleaned.*
+tools/data_triage/messy-DATA-REPORT.html
