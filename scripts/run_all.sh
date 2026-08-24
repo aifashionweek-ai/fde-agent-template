@@ -30,8 +30,8 @@ done
 
 echo
 echo "=== ROUTE 200 MATRIX ==="
-LIVE="/ /hub /business /dashboard /problem /audit /data /infra"
-PENDING="/a2a /evals"
+LIVE="/ /hub /business /dashboard /problem /audit /data /infra /evals"
+PENDING="/a2a"
 for p in $LIVE; do
   code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE$p")
   printf "  %-12s %s\n" "$p" "$code"

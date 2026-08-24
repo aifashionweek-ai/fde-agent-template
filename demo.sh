@@ -30,6 +30,7 @@ fi
 [ -f evals/results/AUDIT.html ]   || { echo "generating AUDIT.html…";   $PY -m evals.audit_report   >/dev/null 2>&1 || true; }
 [ -f tools/data_triage/DATA-REPORT.html ] || { echo "generating DATA-REPORT.html…"; $PY -m tools.data_triage tools/data_triage/fixtures/messy.csv --clean --report tools/data_triage/DATA-REPORT.html --artifacts-dir tools/data_triage >/dev/null 2>&1 || true; }
 [ -f presentation/infra.html ] || { echo "generating infra.html…"; $PY scripts/build_infra.py >/dev/null 2>&1 || true; }
+[ -f presentation/evals.html ] || { echo "generating evals.html…"; $PY scripts/build_evals.py >/dev/null 2>&1 || true; }
 
 cat <<EOF
 ──────────────────────────────────────────────────────────────────────
