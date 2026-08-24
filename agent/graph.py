@@ -71,11 +71,11 @@ def _principal_ids(s):
     return p.get("user_id", "anon"), p.get("tenant_id", "demo"), s.get("run_id", "default")
 
 def _authz_resource(name: str, args: dict) -> dict:
-    """Map a side-effect tool call to the resource authorize() checks (D-045). Only reset_access carries a
+    """Map a side-effect tool call to the resource authorize() checks (D-045). Only submit_action carries a
     subject rule; other actions carry just the tenant. One place, so the pre-gate check and the in-tool
     check agree."""
-    if name == "reset_access":
-        return {"subject": (args or {}).get("employee_id")}
+    if name == "submit_action":
+        return {"subject": (args or {}).get("target")}
     return {}
 
 @node_span("approval")

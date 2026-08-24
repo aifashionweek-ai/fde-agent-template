@@ -24,14 +24,12 @@ done
 curl -s -o /dev/null "$BASE/health" || { echo "ERROR: server did not become ready"; [ "$started" = 1 ] && tail -5 /tmp/run_all_srv.log; exit 1; }
 
 # demo.sh self-heals PROBLEM.html + AUDIT.html on startup; confirm they exist
-for f in evals/results/PROBLEM.html evals/results/AUDIT.html; do
-  [ -f "$f" ] && echo "report present: $f" || echo "report MISSING (will serve placeholder): $f"
 done
 
 echo
 echo "=== ROUTE 200 MATRIX ==="
-LIVE="/ /hub /business /dashboard /problem /audit /data /infra"
-PENDING="/a2a /evals"
+LIVE="/ /dashboard"
+PENDING=""
 for p in $LIVE; do
   code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE$p")
   printf "  %-12s %s\n" "$p" "$code"
@@ -41,11 +39,6 @@ for p in $PENDING; do
   if [ "$code" = "200" ]; then printf "  %-12s %s\n" "$p" "$code"; else printf "  %-12s %s (pending — not built yet)\n" "$p" "$code"; fi
 done
 
-if [ "${1:-}" = "--scenarios" ]; then
-  echo
-  echo "=== SCENARIO VERDICTS (real model, headless) ==="
-  $PY scripts/scenario_check.py
-fi
 
 echo
 echo "DEMO READY — open http://localhost:8000/hub"

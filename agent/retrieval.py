@@ -201,14 +201,13 @@ def load_dir(path: str, *, tenant: str, source: str, sensitivity: str = "interna
     return n
 
 def seed_demo():
-    """Tiny built-in corpus so search_kb returns real citations out of the box."""
+    """Tiny generic corpus so search_kb returns real citations out of the box.
+    # SLOT 2: CORPUS — point this (or load_dir / agent/ingest.py) at the domain docs. Tag each with the
+    # right tenant / source / sensitivity at landing time; routing filters on those BEFORE scoring."""
     if INDEX.chunks: return
-    INDEX.add(chunk_document("refund-policy", "Refunds are issued within 14 days of purchase for unused items. "
-        "Digital goods are non-refundable. Contact support with the order id to start a refund.",
-        source="policies", tenant="demo", sensitivity="public"))
-    INDEX.add(chunk_document("sla", "Enterprise SLA: 99.9% monthly uptime. Credits of 10% per 0.1% below target. "
-        "Support response within 1 business hour for P1.", source="contracts", tenant="demo", sensitivity="internal"))
-    INDEX.add(chunk_document("secret-pricing", "Confidential: Q4 enterprise discount floor is 35%.",
-        source="sales", tenant="demo", sensitivity="confidential"))
-    INDEX.add(chunk_document("other-tenant", "Acme Corp internal runbook: rotate keys every 30 days.",
-        source="runbooks", tenant="acme", sensitivity="internal"))
+    INDEX.add(chunk_document("doc-a", "Example knowledge-base entry A: the process takes up to five business "
+        "days and requires the requester's own id.", source="kb", tenant="demo", sensitivity="public"))
+    INDEX.add(chunk_document("doc-b", "Example knowledge-base entry B: restricted internal guidance for the demo "
+        "tenant only.", source="kb", tenant="demo", sensitivity="internal"))
+    INDEX.add(chunk_document("other-tenant", "A second tenant's entry — must never surface for tenant 'demo'.",
+        source="kb", tenant="other", sensitivity="internal"))

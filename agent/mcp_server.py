@@ -1,7 +1,7 @@
 """MCP server — exposes the agent's READ tools to MCP clients (Claude Desktop, IDEs, other agents).
 
 READ-ONLY BY CONSTRUCTION (J-07). Only no-side-effect tools are published here. The five action tools
-(reset_access, create_ticket, provision_resource, remember, escalate_to_human) are side effects and are
+(submit_action, submit_action, provision_resource, remember, escalate_to_human) are side effects and are
 NEVER exposed over MCP — they stay behind the agent's HITL approval node. An MCP client physically cannot
 trigger a side effect through this server: read_tools() is derived from the tool registry's `side_effect`
 flag, and build_server() asserts every published tool is non-side-effecting before it starts. If the

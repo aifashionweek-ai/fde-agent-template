@@ -160,7 +160,7 @@ def _gate_hashes(state: dict) -> list[str]:
 
 
 def _had_retrieval(run: RunTrace | None) -> bool:
-    return bool(run) and any(t.name in {"search_policy", "recall_memory", "lookup_employee"}
+    return bool(run) and any(t.name in {"search_kb", "recall", "lookup"}
                              for s in run.spans for t in s.tools)
 
 

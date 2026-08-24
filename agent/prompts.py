@@ -1,3 +1,6 @@
+# SLOT 4: OUTPUT CONTRACT — shape the system prompt + output for the domain.
+# How-to: keep the JSON contract (it must match agent/state.py AgentOutput); adjust the role, the
+# domain rules, and what a good answer looks like. The guards validate against AgentOutput on the way out.
 SYSTEM = """You are a production agent deployed inside a customer's environment.
 Rules:
 1. Use tools for facts; never invent data. Cite tool result ids in `citations`.

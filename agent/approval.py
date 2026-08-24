@@ -2,7 +2,7 @@
 approved side effect must fire AT MOST ONCE even if the graph is resumed/replayed.
 
 proposal_hash = sha256(tool | normalized_args | principal | tenant | run_id). The human approves THAT hash.
-At execution we recompute it from the ACTUAL args being run; if they changed after approval (reset_access
+At execution we recompute it from the ACTUAL args being run; if they changed after approval (submit_action
 alice → bob), the hash won't match any approved one and execution is REFUSED. LangGraph's interrupt/resume
 can replay the tools node, so every executed hash is recorded and a repeat is an idempotent no-op — the side
 effect happens exactly once. Read tools carry no side effect, so they need no binding.

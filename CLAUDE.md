@@ -1,7 +1,7 @@
 # CLAUDE.md — working guide for this repo
 
-A governed, observable, deployable **LangGraph agent** for forward-deployed work. Demo domain: Enterprise
-IT-Ops & Employee Support. The point of the repo is not the domain — it's that every safety/quality property
+A governed, observable, deployable **LangGraph agent** for forward-deployed work — a SKELETON stripped
+to the reusable frame + 4 fill-slots. The point of the repo is not the domain — it's that every safety/quality property
 is a **tested invariant**, and any new engagement is done by filling **4 slots**, leaving everything else
 untouched.
 

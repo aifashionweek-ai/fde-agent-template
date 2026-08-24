@@ -92,45 +92,6 @@ def fixture_mcp():                                       # measured MCP-vs-graph
     if not f.exists(): raise HTTPException(404, "no bench — run scripts/bench_mcp_vs_graph.py")
     return json.loads(f.read_text())
 
-# ---- Presentation surfaces (docs/PRESENTATION.md) — static file responses, NO logic, read-only ----
-_REPO = pathlib.Path(__file__).parent.parent
-
-def _placeholder(title: str, hint: str) -> str:
-    return (f"<!doctype html><meta charset=utf-8><title>{title}</title>"
-            "<div style='max-width:640px;margin:12vh auto;font:16px/1.6 -apple-system,sans-serif;"
-            "color:#1a1a2e;padding:0 20px'>"
-            f"<h1 style='font-size:20px'>{title}</h1>"
-            f"<p style='color:#6b7280'>This report hasn't been generated yet.</p>"
-            f"<p>Run <code style='background:#eef2ff;padding:2px 8px;border-radius:6px'>{hint}</code> "
-            "to build it, then refresh. (<code>bash demo.sh</code> regenerates both on startup.)</p>"
-            "<p><a href='/hub' style='color:#4338ca'>← back to hub</a></p></div>")
-
-def _serve_html(path: pathlib.Path, hint: str | None = None):
-    """Serve a static HTML file. A missing backing file NEVER dead-ends in a raw 404 — it returns a clean
-    200 'not generated — run X' page so no demo stop breaks in front of an audience."""
-    if not path.exists():
-        return HTMLResponse(_placeholder(path.stem, hint or f"make {path.stem.lower()}"), status_code=200)
-    return HTMLResponse(path.read_text())
-
-@app.get("/hub", response_class=HTMLResponse, include_in_schema=False)
-def hub(): return _serve_html(_REPO / "presentation" / "index-hub.html", "git checkout presentation/")
-
-@app.get("/business", response_class=HTMLResponse, include_in_schema=False)
-def business(): return _serve_html(_REPO / "presentation" / "business-analytics.html", "git checkout presentation/")
-
-@app.get("/problem", response_class=HTMLResponse, include_in_schema=False)
-def problem(): return _serve_html(_REPO / "evals" / "results" / "PROBLEM.html", "make problem")
-
-@app.get("/audit", response_class=HTMLResponse, include_in_schema=False)
-def audit(): return _serve_html(_REPO / "evals" / "results" / "AUDIT.html", "make audit")
-
-@app.get("/data", response_class=HTMLResponse, include_in_schema=False)
-def data(): return _serve_html(_REPO / "tools" / "data_triage" / "DATA-REPORT.html",   # data-triage report
-                               "python -m tools.data_triage tools/data_triage/fixtures/messy.csv --clean")
-
-@app.get("/infra", response_class=HTMLResponse, include_in_schema=False)
-def infra(): return _serve_html(_REPO / "presentation" / "infra.html",                 # infra/tools/logs from real JSON
-                                "python scripts/build_infra.py")
 
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")

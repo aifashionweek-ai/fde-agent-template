@@ -1,56 +1,14 @@
 [
   {
-    "name": "search_policy",
+    "name": "search_kb",
     "side_effect": false,
     "approval": false,
     "timeout": 10
   },
   {
-    "name": "lookup_employee",
-    "side_effect": false,
-    "approval": false,
-    "timeout": 5
-  },
-  {
-    "name": "recall_memory",
-    "side_effect": false,
-    "approval": false,
-    "timeout": 3
-  },
-  {
-    "name": "calculate",
-    "side_effect": false,
-    "approval": false,
-    "timeout": 2
-  },
-  {
-    "name": "reset_access",
+    "name": "submit_action",
     "side_effect": true,
     "approval": true,
     "timeout": 10
-  },
-  {
-    "name": "create_ticket",
-    "side_effect": true,
-    "approval": true,
-    "timeout": 10
-  },
-  {
-    "name": "provision_resource",
-    "side_effect": true,
-    "approval": true,
-    "timeout": 10
-  },
-  {
-    "name": "remember",
-    "side_effect": true,
-    "approval": true,
-    "timeout": 5
-  },
-  {
-    "name": "escalate_to_human",
-    "side_effect": true,
-    "approval": true,
-    "timeout": 5
   }
 ]

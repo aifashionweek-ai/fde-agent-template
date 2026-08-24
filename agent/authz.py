@@ -31,8 +31,8 @@ def _norm(s) -> str:
 def _same(a, b) -> bool:
     return _norm(a) == _norm(b)
 
-ADMIN_ROLES = {"it_admin", "helpdesk_admin"}
-APPROVER_ROLES = {"approver", "manager", "it_admin"}
+ADMIN_ROLES = {"admin", "superuser"}
+APPROVER_ROLES = {"approver", "manager", "admin"}
 CLEARANCE_BY_ROLE = {"clearance_public": "public", "clearance_internal": "internal",
                      "clearance_confidential": "confidential", "clearance_restricted": "restricted"}
 
@@ -64,12 +64,12 @@ def authorize(principal: Principal, action: str, resource: dict | None = None) -
     if rt is not None and not _same(rt, principal.tenant_id):
         return _deny(f"cross-tenant denied: principal tenant={principal.tenant_id} != resource tenant={rt}")
 
-    # 2) credential reset — self only, unless an admin role.
-    if action == "reset_access":
+    # 2) action on a subject — self only, unless an admin role (generic self-only pattern).
+    if action == "submit_action":
         subject = r.get("subject")
         if subject is not None and not _same(subject, principal.user_id) and not _is_admin(principal):
-            return _deny(f"{principal.user_id} cannot reset credentials of {subject} (not self, not admin)")
-        return _allow("self credential reset" if _same(subject, principal.user_id) else "admin credential reset")
+            return _deny(f"{principal.user_id} cannot act on {subject} (not self, not admin)")
+        return _allow("self action" if _same(subject, principal.user_id) else "admin action")
 
     # 3) approval — no self-approval of a privileged escalation; must hold an approver role.
     if action == "approve":

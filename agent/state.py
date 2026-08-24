@@ -16,6 +16,8 @@ class Action(BaseModel):
         return v
 
 class AgentOutput(BaseModel):
+    # SLOT 4: OUTPUT CONTRACT — shape this for the domain (add typed fields the eval scorers check).
+    # Keep answer/confidence/citations/actions as the generic spine; the guards validate against this.
     answer: str = Field(min_length=1, max_length=4000)
     confidence: float = Field(ge=0.0, le=1.0)
     citations: list[str] = []

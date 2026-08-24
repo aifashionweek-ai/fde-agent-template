@@ -93,7 +93,7 @@ def test_report_renders_real_counts_no_fabrication():
     assert "https://" not in html and "http://" not in html  # self-contained (shared invariant)
     assert "Space Grotesk" in html and "JetBrains Mono" in html
     assert "8" in html and "6" in html                       # rows_in -> rows_out from the real clean log
-    assert "SSN" in html and "meridian" in html.lower()      # real findings surfaced
+    assert "SSN" in html and "globex" in html.lower()        # real findings surfaced
     assert "prompt-injection" in html                        # the injection finding is surfaced (example shown, PII in it redacted)
 
 
