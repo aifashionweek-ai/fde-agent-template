@@ -62,7 +62,7 @@ def test_messy_fixture_trust_scan():
     ssn = next(fd for fd in f["findings"] if "SSN" in fd["finding"])
     assert ssn["severity"] == "high" and ssn["count"] == 1
     assert any("injection" in fd["finding"] and fd["severity"] == "high" for fd in f["findings"])
-    assert f["summary"]["tenant_mixed"] is True   # meridian + aristo in one column
+    assert f["summary"]["tenant_mixed"] is True   # two tenants in one column
 
 
 def test_cleaning_drops_and_redacts(tmp_path):

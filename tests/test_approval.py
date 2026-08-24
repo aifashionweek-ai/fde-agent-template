@@ -6,7 +6,7 @@ from agent.approval import proposal_hash, approve_calls, classify_execution
 ACTION = {"submit_action", "create_ticket", "provision_resource", "remember", "escalate_to_human"}
 def needs_approval(name): return name in ACTION
 
-P, T, R = "alice", "meridian", "run-1"
+P, T, R = "alice", "demo", "run-1"
 def call(name, args, cid="c1"): return {"name": name, "args": args, "id": cid}
 
 
@@ -19,10 +19,10 @@ def test_hash_stable_under_key_order():
 
 
 def test_hash_differs_by_principal_and_tenant_and_run():
-    base = proposal_hash("submit_action", {"e": "alice"}, "alice", "meridian", "r1")
-    assert base != proposal_hash("submit_action", {"e": "alice"}, "mallory", "meridian", "r1")
-    assert base != proposal_hash("submit_action", {"e": "alice"}, "alice", "aristo", "r1")
-    assert base != proposal_hash("submit_action", {"e": "alice"}, "alice", "meridian", "r2")
+    base = proposal_hash("submit_action", {"e": "alice"}, "alice", "demo", "r1")
+    assert base != proposal_hash("submit_action", {"e": "alice"}, "mallory", "demo", "r1")
+    assert base != proposal_hash("submit_action", {"e": "alice"}, "alice", "other", "r1")
+    assert base != proposal_hash("submit_action", {"e": "alice"}, "alice", "demo", "r2")
 
 
 def test_approve_alice_execute_bob_is_refused():

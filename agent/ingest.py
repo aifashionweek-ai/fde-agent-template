@@ -11,7 +11,7 @@ adds layout detection and needs the poppler system dep (`brew install poppler` /
 poppler-utils`).
 
     from agent.ingest import ingest_directory
-    stats = ingest_directory("data/sample_corpus", tenant="meridian", sensitivity="internal")
+    stats = ingest_directory("corpus", tenant="demo", sensitivity="internal")
     print(stats.as_dict())   # {files_processed, chunks_produced, bytes_in, files_skipped, ...}
 
 Same interface at any scale: point it at a local folder for the demo, or an object-storage mount (S3) in
@@ -200,7 +200,7 @@ def ingest_directory(path, *, tenant: str, sensitivity: str = "internal", index=
 
 if __name__ == "__main__":
     import sys, json
-    d = sys.argv[1] if len(sys.argv) > 1 else "data/sample_corpus"
-    st = ingest_directory(d, tenant=os.getenv("TENANT", "meridian"),
+    d = sys.argv[1] if len(sys.argv) > 1 else "corpus"
+    st = ingest_directory(d, tenant=os.getenv("TENANT", "demo"),
                           sensitivity=os.getenv("MAX_SENSITIVITY", "internal"))
     print(json.dumps(st.as_dict(), indent=2))

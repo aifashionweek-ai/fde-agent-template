@@ -14,7 +14,7 @@ from agent.approval import approve_calls, proposal_hash, classify_execution
 from agent.retrieval import InMemoryIndex, chunk_document
 from agent.tools import tool_needs_approval
 
-_UID, _TENANT, _RUN = "alice", "meridian", "run-1"
+_UID, _TENANT, _RUN = "alice", "demo", "run-1"
 
 
 def _principal(d: dict) -> Principal:

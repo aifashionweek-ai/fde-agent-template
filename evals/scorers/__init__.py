@@ -69,7 +69,7 @@ def agreement(a: list[float], b: list[float], thresh: float = 0.5) -> float:
 
 # ---------- LLM judges (correctness-focused; docs/05-evals-braintrust.md) ----------
 # `factual` grades CORRECTNESS vs the reference facts, NOT verbosity. A correct answer that adds helpful
-# detail or cites the right runbook earns full marks; a wrong/contradictory answer scores zero. This
+# detail or cites the right document earns full marks; a wrong/contradictory answer scores zero. This
 # replaces autoevals.Factuality, whose subset/superset scoring capped correct-but-detailed answers at 0.6
 # (e.g. "17 × 23 = 391" vs gold "391" scored 0.6). Wrong answers MUST still score low — see FACTUAL_SCORES
 # (D→0.0, monotonic) and the catch-proof in tests/test_scorers_judge.py. Grounding (deterministic, 1.00)
@@ -81,7 +81,7 @@ FACTUAL_PROMPT = (
     "Agent answer (may cite evidence ids in a separate note; extra correct detail is fine):\n{{output}}\n\n"
     "Grade how well the agent answer matches the reference FACTS:\n"
     "A) Fully correct — all key facts from the reference are present and nothing contradicts it. Extra "
-    "correct or helpful detail, and citing the right runbook, is GOOD and must NOT lower the grade.\n"
+    "correct or helpful detail, and citing the right document, is GOOD and must NOT lower the grade.\n"
     "B) Mostly correct — the main fact is right but one minor point is vague or missing.\n"
     "C) Partially correct — some right content but a material fact is missing or muddled.\n"
     "D) Incorrect — a wrong value, a claim that contradicts the reference, or fabricated facts.\n"
@@ -103,7 +103,7 @@ RUBRIC_SCORES = {"A": 1, "B": 0}
 
 def answer_for_judge(out: dict) -> str:
     """The answer string handed to the LLM judges — appends the agent's cited evidence ids as a separate
-    note so a 'cites <runbook>' rubric is satisfied by the citations FIELD, not by prose exact-match."""
+    note so a 'cites <document>' rubric is satisfied by the citations FIELD, not by prose exact-match."""
     ans = (out or {}).get("answer", "") or ""
     cites = (out or {}).get("citations") or []
     if cites: ans += f"\n\n[Evidence cited by the agent (separate field): {', '.join(cites)}]"

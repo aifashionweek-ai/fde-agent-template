@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Demo driver — terminal 1 of the two-terminal demo (docs/DEMO-RUNBOOK.md).
+# Demo driver — terminal 1 of the two-terminal demo (docs/BUILD-ORDER.md).
 # Checks the environment, then serves the governed agent + chat UI on :8000.
 set -euo pipefail
 cd "$(dirname "$0")"

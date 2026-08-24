@@ -5,9 +5,9 @@ to the reusable frame + 4 fill-slots. The point of the repo is not the domain �
 is a **tested invariant**, and any new engagement is done by filling **4 slots**, leaving everything else
 untouched.
 
-## Prime directives (from jaswant-manifest.md — read it first)
+## Prime directives (from engineering-canon.local.md — read it first)
 These are defects when violated, not style choices. The full canon (with lessons) is in
-`jaswant-manifest.md` (gitignored — local only). The ones that shape every change here:
+`engineering-canon.local.md` (gitignored — local only). The ones that shape every change here:
 
 - **J-01 · No guessing — run through logs.** Every claim about state comes from a real file, live command,
   or log. If you can't cite evidence, say "NO EVIDENCE" and go get it.
@@ -79,5 +79,5 @@ Everything else (graph, guards, memory, tracing, eval gate, governance) stays un
 - Mark a `D-###` row ✅ unless its guard exists and passes on disk (J-02). No asserted greens.
 - Add a directive without a `MANIFEST` row + `MASTERSCHEMA` contract + catch-proven test (J-03).
 - Publish a side-effect tool over MCP, or execute one without the approval node (J-07).
-- Commit secrets — they live only in local `.env` (gitignored). `jaswant-manifest.md` is gitignored (private).
+- Commit secrets — they live only in local `.env` (gitignored). `engineering-canon.local.md` is gitignored (private).
 - Detailed rules live in `.claude/rules/{evals,tools,debugging}.md`.

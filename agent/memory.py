@@ -1,4 +1,4 @@
-"""Agentic memory (D-016, D-017, D-018). Three kinds, because interviewers ask "how does it remember":
+"""Agentic memory (D-016, D-017, D-018). Three kinds:
 
   1. SHORT-TERM / working  — the message list within one thread, checkpointed by thread_id.
                              Already handled by LangGraph's checkpointer in graph.py. Survives a turn,

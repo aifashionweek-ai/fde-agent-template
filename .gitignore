@@ -6,10 +6,10 @@ __pycache__/
 *.egg-info/
 evals/results/
 .local/
-# private engineering canon — mirrored in ~/Code/interview-notes (private repo); never publish here
-jaswant-manifest.md
+# private engineering canon — local only; never publish here
+engineering-canon.local.md
 append_lesson.py
-# local-only notes (rehearsal, interview framing) — never publish
+# local-only notes — never publish
 *.local.md
 
 # eval harness C: generated reports (keep one committed sample)
