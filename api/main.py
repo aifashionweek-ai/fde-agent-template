@@ -96,14 +96,23 @@ def fixture_mcp():                                       # measured MCP-vs-graph
 _REPO = pathlib.Path(__file__).parent.parent
 
 def _placeholder(title: str, hint: str) -> str:
-    return (f"<!doctype html><meta charset=utf-8><title>{title}</title>"
-            "<div style='max-width:640px;margin:12vh auto;font:16px/1.6 -apple-system,sans-serif;"
-            "color:#1a1a2e;padding:0 20px'>"
-            f"<h1 style='font-size:20px'>{title}</h1>"
-            f"<p style='color:#6b7280'>This report hasn't been generated yet.</p>"
-            f"<p>Run <code style='background:#eef2ff;padding:2px 8px;border-radius:6px'>{hint}</code> "
-            "to build it, then refresh. (<code>bash demo.sh</code> regenerates both on startup.)</p>"
-            "<p><a href='/hub' style='color:#4338ca'>← back to hub</a></p></div>")
+    # House-style + self-contained: even the "not generated yet" page carries the shared type system
+    # (Space Grotesk / JetBrains Mono / --line palette), so a cold clone (or CI, before reports are built)
+    # serves an on-brand page and the shared-token drift test stays hermetic — no generated file required.
+    return (f"<!doctype html><html lang=en><head><meta charset=utf-8>"
+            f"<meta name=viewport content='width=device-width, initial-scale=1'><title>{title}</title>"
+            "<style>:root{--ink:#1a1a2e;--mut:#6b7280;--line:#e5e7eb;--accent:#4338ca;--bg:#fafafa}"
+            "body{margin:0;font:16px/1.6 'Space Grotesk',-apple-system,\"Segoe UI\",sans-serif;color:var(--ink);"
+            "background:var(--bg)}main{max-width:640px;margin:12vh auto;padding:0 20px}"
+            "h1{font-size:20px;margin:0 0 6px}.sub{color:var(--mut)}"
+            "code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;background:#eef2ff;"
+            "border:1px solid var(--line);padding:2px 8px;border-radius:6px}"
+            "a{color:var(--accent);text-decoration:none}</style></head><body><main>"
+            f"<h1>{title}</h1>"
+            "<p class=sub>This report hasn't been generated yet.</p>"
+            f"<p>Run <code>{hint}</code> to build it, then refresh. "
+            "(<code>bash demo.sh</code> self-heals the reports on startup.)</p>"
+            "<p><a href='/hub'>&larr; back to hub</a></p></main></body></html>")
 
 def _serve_html(path: pathlib.Path, hint: str | None = None):
     """Serve a static HTML file. A missing backing file NEVER dead-ends in a raw 404 — it returns a clean
@@ -147,6 +156,10 @@ def a2a(): return _serve_html(_REPO / "presentation" / "a2a.html",              
 @app.get("/signal", response_class=HTMLResponse, include_in_schema=False)
 def signal(): return _serve_html(_REPO / "presentation" / "signal.html",                 # data->recommendations, real measured only
                                  "python scripts/build_signal.py")
+
+@app.get("/runnable", response_class=HTMLResponse, include_in_schema=False)
+def runnable(): return _serve_html(_REPO / "presentation" / "runnable.html",              # verified 5-min cold-start (static)
+                                   "git checkout presentation/")
 
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")

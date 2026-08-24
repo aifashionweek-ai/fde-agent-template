@@ -31,10 +31,31 @@ def test_all_six_stops_return_200():
 
 
 def test_missing_backing_file_serves_placeholder_not_404():
-    """A route whose backing file is absent returns a clean 200 'run X' page, never a raw 404/500."""
+    """A route whose backing file is absent returns a clean 200 'run X' page, never a raw 404/500 —
+    AND the placeholder itself carries the shared house-style tokens, so the drift test stays hermetic
+    on a cold clone / CI where generated reports don't exist yet (catch-proof for that fix)."""
     import pathlib
     from api.main import _serve_html
     resp = _serve_html(pathlib.Path("/no/such/report.html"), hint="make audit")
     assert resp.status_code == 200
     body = bytes(resp.body).decode()
     assert "hasn't been generated" in body and "make audit" in body
+    assert "Space Grotesk" in body and "JetBrains Mono" in body and "--line" in body   # on-brand, hermetic
+
+
+def test_runnable_served():
+    """STOP 12 'Run it yourself' shows the REAL verified quickstart + the graceful no-key message."""
+    r = client.get("/runnable")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    # the verified quickstart commands appear verbatim
+    for cmd in ["python3.11 -m venv .venv", "pip install -r requirements.txt", "make demo", "make check"]:
+        assert cmd in r.text, f"missing quickstart command: {cmd}"
+    # the graceful no-credential message text appears (the reviewer-trust point)
+    assert "No model credentials found" in r.text
+    assert "export ANTHROPIC_API_KEY=" in r.text
+    # the measured, verified result is shown (robust to unrelated test-count drift: assert the shape,
+    # not a brittle total — the page states the real number, this just proves a real result is present)
+    assert "2 skipped" in r.text and "passed" in r.text
+    # self-contained: no external stylesheet / font / script / @import (URLs in code text are fine)
+    assert "<link" not in r.text and "@import" not in r.text
+    assert 'src="http' not in r.text and 'stylesheet' not in r.text

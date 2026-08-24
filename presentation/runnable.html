@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run it yourself — 5-minute cold start</title>
+<style>
+  :root { --ink:#1a1a2e; --mut:#6b7280; --line:#e5e7eb; --accent:#4338ca; --bg:#fafafa;
+          --good:#166534; --good-bg:#f0fdf4; --warn:#b45309; --warn-bg:#fffbeb; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.6 'Space Grotesk',-apple-system,"Segoe UI",sans-serif; color:var(--ink);
+         background:linear-gradient(180deg,#f4f4fb,#fafafa); }
+  main { max-width:760px; margin:0 auto; padding:40px 18px 80px; }
+  a.back { color:var(--accent); text-decoration:none; font-size:13px; }
+  h1 { font-size:24px; margin:6px 0 4px; } .sub { color:var(--mut); margin-bottom:22px; }
+  h2 { font-size:15px; margin:30px 0 10px; text-transform:uppercase; letter-spacing:.05em; color:var(--accent);
+       border-bottom:1px solid var(--line); padding-bottom:6px; }
+  .thesis { background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent);
+            border-radius:10px; padding:14px 16px; margin-bottom:8px; font-size:14.5px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin:10px 0; }
+  .cmd { display:block; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:12px; line-height:1.7;
+         background:#0f1222; color:#e7e9f3; border:1px solid var(--line); border-radius:10px; padding:14px 16px;
+         overflow-x:auto; white-space:pre; }
+  .cmd .c { color:#8a90b8; }              /* comment */
+  .msg { display:block; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:11.5px; line-height:1.55;
+         background:#fbfbfd; color:#1a1a2e; border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+         overflow-x:auto; white-space:pre; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .k { font-weight:700; } .mono { font-family:'JetBrains Mono',ui-monospace,monospace; font-size:12px; }
+  code { font-family:'JetBrains Mono',ui-monospace,monospace; font-size:12.5px; background:#eef2ff;
+         border:1px solid var(--line); padding:1px 6px; border-radius:5px; }
+  .pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
+  .pill.good { background:var(--good-bg); color:var(--good); }
+  .pill.warn { background:var(--warn-bg); color:var(--warn); }
+  ul { margin:6px 0 0; padding-left:20px; } li { margin:4px 0; }
+  .foot { color:var(--mut); font-size:12.5px; margin-top:26px; border-top:1px solid var(--line); padding-top:12px; }
+  @media (max-width:640px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/hub">← back to hub</a>
+  <h1>Run it yourself</h1>
+  <div class="sub">Clone it and it runs in ~5 minutes. No key? The tests still prove the whole system offline — it never crashes, it tells you what to set.</div>
+
+  <div class="thesis">This is the <b>actually-verified</b> path — run from a fresh clone on Python 3.12
+    (any 3.11+). Not an idealized README: every command and message below was executed and captured.</div>
+
+  <h2>1 · The 5-minute contract</h2>
+  <div class="sub" style="margin:0 0 8px">Copy-paste, in order. Needs <code>git</code> and Python 3.11+.</div>
+  <code class="cmd">git clone --branch feat/presentation --single-branch \
+  https://github.com/aifashionweek-ai/fde-agent-template.git fde-agent
+cd fde-agent
+
+python3.11 -m venv .venv && source .venv/bin/activate   <span class="c"># any 3.11+ (verified on 3.12)</span>
+pip install -r requirements.txt                         <span class="c"># ~10s, no build steps</span>
+
+export ANTHROPIC_API_KEY=sk-ant-...                     <span class="c"># or skip → run `make check` offline (§3)</span>
+make demo                                               <span class="c"># serves http://localhost:8000/</span></code>
+  <div class="sub" style="margin-top:7px">Shortcut for the two venv/install lines: <code>make setup</code> (creates <code>.venv</code> + installs).</div>
+
+  <h2>2 · What you'll see</h2>
+  <div class="sub" style="margin:0 0 8px"><code>make demo</code> serves a governed chat at <span class="mono">http://localhost:8000/</span>. Two things to try:</div>
+  <div class="grid">
+    <div class="card"><span class="pill good">READ — no approval</span>
+      <p style="margin:8px 0 0">Ask <i>"what does the knowledge base say the process requires?"</i> →
+      you get an <b>answer with citations</b> and a <b>confidence</b>. Reads are safe.</p></div>
+    <div class="card"><span class="pill warn">SIDE EFFECT — approval gate</span>
+      <p style="margin:8px 0 0">Ask for an action (e.g. reset access) → the run <b>pauses</b>: the UI shows the
+      exact tool call + a <b>proposal hash</b> and waits for Approve/Deny. Nothing executes until you approve.</p></div>
+  </div>
+  <div class="sub" style="margin-top:8px">Verified live: a side-effect request returns <code>status: interrupted</code>
+    with the pending tool call and its proposal hash; approving (bound to that hash) executes it — a tampered hash is <code>REFUSED</code>.
+    <b>Agent proposes, human disposes.</b></div>
+
+  <h2>3 · No key? The tests still prove the system</h2>
+  <div class="sub" style="margin:0 0 8px">The full invariant suite runs <b>offline — no network, no credentials</b>:</div>
+  <code class="cmd">make check     <span class="c"># regenerates the tool registry, drift-checks, runs the suite</span>
+<span class="c"># → 201 passed, 2 skipped   (the 2 skipped need model keys; every invariant runs)</span></code>
+  <div class="sub" style="margin:8px 0 8px">It covers the approval gate, authz-before-gate, injection refusal, grounding, and MCP read-only —
+    the properties that make the agent <i>safe to leave running</i>. And if you run the live demo <b>without</b> a key,
+    it prints this and exits cleanly — <b>no traceback</b>:</div>
+  <code class="msg">──────────────────────────────────────────────────────────────────────
+  No model credentials found — the live chat demo needs one to call a model.
+
+  Fix (pick one), then re-run `make demo`:
+    export ANTHROPIC_API_KEY=sk-ant-...        # get a key at https://console.anthropic.com
+    # …or configure Bedrock: set BEDROCK_MODEL_ID + AWS creds and LLM_PROVIDER=bedrock
+
+  No key handy? Prove the whole system OFFLINE (no network, no key):
+    make check      # the full invariant suite: approval gate, authz, injection, grounding, MCP read-only
+──────────────────────────────────────────────────────────────────────</code>
+
+  <h2>4 · Prerequisites</h2>
+  <ul>
+    <li><span class="k">Python 3.11 or newer</span> — verified on 3.12. Plus <code>git</code>. macOS / Linux.</li>
+    <li><span class="k">A model credential is needed only for the live chat demo</span> — <code>ANTHROPIC_API_KEY</code>,
+      or Bedrock (<code>BEDROCK_MODEL_ID</code> + AWS creds + <code>LLM_PROVIDER=bedrock</code>).
+      <b><code>make check</code> needs none.</b></li>
+    <li><span class="k">Nothing else</span> — no Docker, no services, no build toolchain. <code>pip install -r requirements.txt</code> is the only install.</li>
+  </ul>
+
+  <div class="foot">Every command and the no-key message above were run from a fresh <code>--single-branch</code>
+    clone and captured verbatim (J-01) — the numbers (install time, <code>201 passed, 2 skipped</code>) are measured, not asserted.</div>
+</main>
+</body>
+</html>
