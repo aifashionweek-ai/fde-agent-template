@@ -88,14 +88,35 @@ registry + the Braintrust bake-off shell (`scripts/model_bakeoff.sh`) — add th
 **Fill workflow:** land on the problem → **profile the corpus** (data-triage) → **fill the 4 slots** (use
 `snippets/`) → **red-first bug** (new `D-###`) → **`make showcase`** → **freeze** (`make check` green on disk).
 
+## Honesty rules (live demo) — J-02 is the whole point
+Say these to yourself before you screen-share. The kit is built so you *can't* break them by accident, but
+the discipline is yours:
+- **Only show a stop filled from a real run.** If a stop is `placeholder`, leave it — the "pending — run X"
+  card is a feature, not a gap. Never hand-fill HTML to make a stop look done.
+- **Every spoken number traces to an openable artifact.** If you say it, you can open the file it came from
+  (`evals/report/*.json`, `presentation/data/*.json`, a `workflows/*.yaml`, a pytest run). No artifact → don't
+  say the number.
+- **Name real vs documented vs deferred, explicitly.** "This is running"; "this is documented in the
+  reference build, not shipped here" (see §6); "this is a deferred gap" — say which. **A placeholder beats a
+  fake, always.**
+
+How the kit enforces it (so this isn't just a promise):
+- Every showcase generator READS a real artifact and renders the house-style **"pending — run X"** placeholder
+  when it's absent — never a hardcoded value. Verified per-stop: build each against an empty root → every
+  data-driven stop returns `placeholder` (only `/runnable`, the fixed quickstart, is instructions).
+- `tests/test_showcase.py::test_no_generator_fabricates_absent_artifact_is_placeholder` is the **anti-hardcoding
+  catch-proof** — it fails and names any generator that renders `filled` without its artifact (proven to bite).
+- `make showcase`'s **completion matrix** labels every stop `filled` / `placeholder` / `error` / `static`, so
+  at a glance you and the reviewer see exactly what is real.
+
 ## 8 · Last-verified baseline — 2026-08-24 (`template-skeleton`, workflows/13-stop framework landed)
 Run these on a fresh clone to confirm the kit is intact. Real results captured today:
 
 | Check | Command | Result |
 |---|---|---|
-| gate | `python update.py --check` | **50 passed**, 15 MANIFEST rows, no drift |
+| gate | `python update.py --check` | **51 passed**, 15 MANIFEST rows, no drift |
 | lint | `make lint` (ruff + mypy) | ruff **All checks passed**; mypy **Success: no issues in 51 files** |
-| offline tests (no key) | `make check` | same **50 passed** — needs no API key |
+| offline tests (no key) | `make check` | same **51 passed** — needs no API key |
 | showcase | `make showcase` | **5 filled · 7 placeholder · 0 error · 2 static** across all 13 stops (placeholders honest) |
 | leak scan (IT-ops domain) | `git grep -Ei "meridian\|reset_access\|interview"` | **0 hits** — no IT-ops domain/tool-name leaked; only method/framework/generators are ported |
 | leak scan (author refs) | `git grep -Ei "jaswant"` | benign — `LICENSE` copyright, `.gitignore` protecting the private canon, and the reference-build provenance note in §6 (author/owner, not domain data) |

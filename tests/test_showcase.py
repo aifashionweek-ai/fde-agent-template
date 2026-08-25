@@ -48,6 +48,30 @@ def test_missing_data_renders_pending_not_fake():
     assert "Pending" in html and "business.json" in html
 
 
+# stops that are legitimately always-filled: they carry NO run-derived number, so there is nothing to fake.
+#   runnable — the fixed quickstart contract (instructions, verifiable by running them, not data).
+_NO_DATA_CLAIM = {"runnable"}
+
+
+def test_no_generator_fabricates_absent_artifact_is_placeholder(tmp_path):
+    """ANTI-HARDCODING catch-proof (J-02, the whole point): every data-driven stop, built against an EMPTY
+    root (no data files at all), MUST return 'placeholder'. A generator that hardcoded a number instead of
+    reading its artifact would render 'filled' here — this test would then fail and NAME it. This is
+    generic: it covers every current and future stop automatically. Paired with
+    test_evals_and_audit_fill_from_committed_report (which proves 'filled' happens when the artifact IS
+    present), it proves each generator genuinely branches on the real file — never a constant."""
+    import importlib
+    offenders = {}
+    for s in GENERATED:
+        if s["key"] in _NO_DATA_CLAIM:
+            continue
+        mod = importlib.import_module(f"presentation.build_{s['key']}")
+        status, _ = mod.build(tmp_path)          # tmp_path has none of the data files
+        if status != "placeholder":
+            offenders[s["key"]] = status
+    assert not offenders, f"stops that did NOT degrade to placeholder on an empty root (hardcoded data?): {offenders}"
+
+
 def test_evals_and_audit_fill_from_committed_report():
     """On a bare clone the eval-backed stops fill from the committed sample report (proves 'filled' works)."""
     import presentation.build_audit as au
