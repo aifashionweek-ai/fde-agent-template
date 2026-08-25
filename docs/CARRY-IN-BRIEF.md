@@ -114,9 +114,9 @@ Run these on a fresh clone to confirm the kit is intact. Real results captured t
 
 | Check | Command | Result |
 |---|---|---|
-| gate | `python update.py --check` | **51 passed**, 15 MANIFEST rows, no drift |
+| gate | `python update.py --check` | **56 passed**, 16 MANIFEST rows, no drift |
 | lint | `make lint` (ruff + mypy) | ruff **All checks passed**; mypy **Success: no issues in 51 files** |
-| offline tests (no key) | `make check` | same **51 passed** — needs no API key |
+| offline tests (no key) | `make check` | same **56 passed** — needs no API key |
 | showcase | `make showcase` | **5 filled · 7 placeholder · 0 error · 2 static** across all 13 stops (placeholders honest) |
 | leak scan (IT-ops domain) | `git grep -Ei "meridian\|reset_access\|interview"` | **0 hits** — no IT-ops domain/tool-name leaked; only method/framework/generators are ported |
 | leak scan (author refs) | `git grep -Ei "jaswant"` | benign — `LICENSE` copyright, `.gitignore` protecting the private canon, and the reference-build provenance note in §6 (author/owner, not domain data) |

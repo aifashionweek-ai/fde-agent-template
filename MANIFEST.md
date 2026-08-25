@@ -17,6 +17,7 @@ tools, output contract) is the four SLOTs — fill those, leave everything below
 | D-025 | MCP publishes READ tools only; side-effect/approval tools are WITHHELD (J-07) | tests/test_mcp.py::test_no_action_tool_is_published       | ✅ |
 | D-033 | Deterministic authorization (NOT the LLM): tenant isolation + self-only action unless admin | tests/test_frame.py::test_authz_self_only_and_tenant | ✅ |
 | D-034 | Approval integrity + idempotency: approval binds to proposal_hash; tamper REFUSED; replay = idempotent skip | tests/test_approval.py::test_approve_alice_execute_bob_is_refused | ✅ |
+| D-038 | HITL wire-protocol binding: /run's interrupt exposes {pending_tool_calls, proposal_hashes}; /approve {approve, hashes} grants ONLY the hashes the human SAW — a bare approve, an empty list, or a wrong/extra hash executes NOTHING (tools recomputes each proposal_hash and REFUSES anything not approved). Binds to what was shown over the wire, not what is pending at resume | tests/test_api_hitl.py::test_approve_with_a_wrong_hash_is_refused | ✅ |
 | D-042 | Identity comparisons normalized (NFKC+strip+casefold) before compare      | tests/test_frame.py::test_authz_identity_normalized       | ✅ |
 | D-044 | Per-layer observability spans (real tokens/latency/status), additive      | tests/test_frame.py::test_telemetry_one_span_per_node     | ✅ |
 | D-045 | Authorization runs BEFORE the human approval gate                        | tests/test_frame.py::test_authz_before_gate               | ✅ |
