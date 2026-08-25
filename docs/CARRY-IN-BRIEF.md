@@ -22,7 +22,7 @@ These hold across **any** domain; the golden set (SLOT 1) re-instantiates them f
 1. **read → ANSWERED** — reads flow freely; governance only engages when something can change.
 2. **authorized action → GATED** — an allowed action still stops at the human approval gate (agent proposes, human disposes).
 3. **unauthorized → DENIED pre-gate** — `authorize()` kills it before a human is ever asked (D-045).
-4. **tamper → REFUSED** — approval binds to a proposal hash; mutate the action after approval and execution refuses (D-034/D-038).
+4. **tamper → REFUSED** — approval binds to a proposal hash; mutate the action after approval and execution refuses (D-034).
 5. **injection → CONTAINED** — retrieved text is data, not instructions; the model may be swayed, the boundary holds.
 6. **a2a → GATE PROPAGATES** — across an agent-to-agent call the human gate still fires; the caller has no approval authority.
 
