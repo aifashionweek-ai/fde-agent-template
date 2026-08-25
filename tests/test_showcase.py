@@ -1,4 +1,4 @@
-"""The 12-stop showcase: generators read real data (J-01), never fabricate; a stop with no data renders a
+"""The 13-stop showcase: generators read real data (J-01), never fabricate; a stop with no data renders a
 house-style 'pending' card, never a fake or a 404 (J-02); every served page carries the shared design
 tokens (single-sourced in presentation/tokens.py), so nothing drifts. Catch-proof included.
 """

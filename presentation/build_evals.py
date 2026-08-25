@@ -8,6 +8,45 @@ from presentation import render as r
 KEY = "evals"
 
 
+def _scores_detail(qual, inv):
+    """Drill-down: the real per-case scores behind each quality mean, and the documented xfail residuals."""
+    blocks = ""
+    for m, v in qual.items():
+        sc = v.get("scores") or []
+        if sc:
+            chips = " ".join(
+                (r.pill(f"{s:.2f}", "good" if isinstance(s, (int, float)) and s >= v.get("threshold", 0) else "warn")
+                 if isinstance(s, (int, float)) else r.esc(str(s)))
+                for s in sc
+            )
+            blocks += (f'<div class="card"><span class="k">{r.esc(m)}</span> — {len(sc)} cases, '
+                       f'mean {v.get("mean", 0):.2f} vs threshold {v.get("threshold", 0):.2f}'
+                       f'<div style="margin-top:6px">{chips}</div></div>')
+    res = ""
+    for layer, v in inv.items():
+        for x in v.get("xfail_rows", []) or []:
+            res += (f'<li>{r.pill("xfail", "warn")} <b>{r.esc(layer)}</b> · '
+                    f'{r.esc(x.get("attack_class", ""))} — {r.esc(x.get("residual", ""))}</li>')
+    if res:
+        blocks += ('<div class="card"><span class="k">Documented residuals (xfail — shown, never gating, '
+                   f'never faked green)</span><ul>{res}</ul></div>')
+    return blocks
+
+
+def _cases_table(data):
+    """Optional drill-down: per-case rows, IF the report carries them. Absent → ''."""
+    cases = data.get("cases") or []
+    if not cases:
+        return ""
+    rows = [[r.esc(c.get("id", c.get("input", ""))),
+             r.esc(c.get("slice", c.get("tag", ""))),
+             r.pill("pass", "good") if c.get("passed") else r.pill("fail", "bad"),
+             r.esc(c.get("note", ""))]
+            for c in cases]
+    return r.section(4, "Per-case drill-down", r.table(["case", "slice", "verdict", "note"], rows),
+                     lead="Every golden-set case and its computed verdict — the row-level evidence.")
+
+
 def render_filled(data, root, stop):
     gate = data.get("gate", {})
     inv = data.get("invariant", {})
@@ -45,9 +84,12 @@ def render_filled(data, root, stop):
                     lead="Deterministic scorers at 1.00 are invariants; any breach is a defect, not a threshold.")
         + r.section(3, "Quality thresholds", qual_tbl,
                     lead="Judged / measured metrics with per-slice thresholds.")
+        + r.section("↳", "Drill-down — measured scores & residuals", _scores_detail(qual, inv),
+                    lead="The real per-case scores behind each mean, and every documented xfail residual.")
+        + _cases_table(data)
     )
-    return r.document(stop["title"], "showcase · stop 07", stop["title"],
-                      "The golden set is the spec; this is the computed gate over it.", body)
+    return r.document(stop["title"], f"showcase · stop {stop['num']:02d}", stop["title"],
+                      "The golden set is the spec; this is the computed gate over it, drilled down.", body)
 
 
 def build(root=_base.ROOT):

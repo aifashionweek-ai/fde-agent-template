@@ -91,6 +91,7 @@ STOPS: list[dict[str, Any]] = [
     {"key": "signal",   "route": "/signal",   "num": 10, "title": "Signal — data → recs",        "cue": "Read the eval + telemetry data, recommend back to engineering.",            "out": "signal.html",         "data": "evals/fixtures/telemetry_runs.json",  "needs": "scripts/capture_runs.py"},
     {"key": "data",     "route": "/data",     "num": 11, "title": "Data triage",                 "cue": "Profile / scan / clean / report any file — first 15 minutes.",              "out": "data.html",           "data": "presentation/data/triage.json",       "needs": "python -m tools.data_triage <file> --json"},
     {"key": "runnable", "route": "/runnable", "num": 12, "title": "Run it yourself",             "cue": "Clone it, it runs in 5 minutes; no key? the tests still prove it offline.",  "out": "runnable.html",       "data": None,                          "needs": None},
+    {"key": "workflows","route": "/workflows","num": 13, "title": "Workflows & patterns",         "cue": "Decompose the problem into a workflow, then attach controls per step's risk.",  "out": "workflows.html",      "data": None,                          "needs": "declare workflows/*.yaml (copy workflows/templates/domain-flow.template.yaml)"},
 ]
 
 # route -> generated file, for the served-page drift test (only the generated stops; chat/dashboard are api/*.html)

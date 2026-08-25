@@ -1,0 +1,37 @@
+# TEMPLATE · a domain workflow declaration.
+# Copy this file to workflows/<your-flow>.yaml and fill every SLOT. Then `make showcase` renders it behind
+# /workflows, led by the determination method. tests/test_workflows.py fails if a flow names a tool not in
+# agent/tool_registry.json, a control not in MANIFEST.md, or an unknown pattern.
+#
+# Files under workflows/templates/ are NOT rendered or validated — only real declarations in workflows/*.yaml are.
+
+name: SLOT-flow-name                         # kebab-case, unique
+title: "SLOT — one line naming the flow"
+business_request: >
+  SLOT — the business request this flow serves, in plain language (what the user wants, and whether it
+  changes state).
+
+# Pick with PATTERNS.md §3. One of:
+#   prompt-chaining | routing | parallelization | orchestrator-workers | evaluator-optimizer | dynamic-agent
+pattern: SLOT-pattern
+pattern_source: workflows/PATTERNS.md
+determination: >
+  SLOT — the one-line WHY from the determination method: is the path known (→ workflow, which shape) or
+  dynamic (→ agent, how it progresses)?
+
+graph_flow: "SLOT — the ordered real graph nodes, e.g. guard_input → plan → act ⇄ tools → finalize"
+
+steps:
+  - node: SLOT-real-graph-node               # guard_input | plan | act | tools | approval | finalize
+    does: "SLOT — what this step does"
+    tools: []                                # SLOT — tool names from agent/tool_registry.json (e.g. search_kb); [] if none
+    controls: [SLOT-D-row]                   # SLOT — D-### rows from MANIFEST.md whose worst case this step must satisfy
+  # add one block per step…
+
+tools_used:
+  read:   []                                 # SLOT — read tools (side_effect:false) this flow uses
+  action: []                                 # SLOT — action tools (side_effect:true), each routed through approval
+
+human_gate:
+  point: SLOT                                # "approval" if the flow acts; "none" for a pure read
+  why: "SLOT — why the gate is (or isn't) here, per the step's risk"

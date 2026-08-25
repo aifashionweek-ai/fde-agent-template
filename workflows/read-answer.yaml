@@ -1,0 +1,46 @@
+# Workflow · read-answer   (FRAME flow — exists in every domain; uses the frame's generic tools)
+# Declarative map of a REAL flow in agent/graph.py → its pattern (PATTERNS.md) → per-step controls
+# (MANIFEST D-rows). Every `node` is a real graph node, every tool is in agent/tool_registry.json, every
+# control is a D-### row in MANIFEST.md. A domain reuses this shape with its own read tools.
+
+name: read-answer
+title: "Read / answer — respond from the retrieved, scoped corpus"
+business_request: >
+  A user asks a question the agent can answer from the corpus. It retrieves scoped context and answers,
+  citing only what it actually retrieved. Nothing changes state, so no human gate fires — governance
+  engages only when something CAN change.
+
+pattern: prompt-chaining          # one of the 5 canonical patterns (PATTERNS.md §2)
+pattern_source: workflows/PATTERNS.md
+determination: >
+  The path is known before starting and linear (PATTERNS.md §3a→§3b): guard-scrub → plan → retrieve →
+  answer → ground. A search_kb call is a bounded read sub-step, not a branch — step-risk (§3d) attaches a
+  tenant filter + grounding, and no approval.
+
+graph_flow: "guard_input → plan → act ⇄ tools → finalize"   # real nodes (agent/graph.py)
+
+steps:
+  - node: guard_input
+    does: "scrub input PII and run layered prompt-injection detection"
+    tools: []
+    controls: [D-005]                # input PII redaction + injection detection (layered)
+  - node: plan
+    does: "the model plans the read; it proposes no side effect"
+    tools: []
+    controls: [D-001]                # bounded: must terminate / budget breach is a result
+  - node: act ⇄ tools
+    does: "retrieve scoped context from the corpus"
+    tools: [search_kb]
+    controls: [D-011, D-033, D-005]  # routed BEFORE ranking (tenant) · authz clearance · retrieved text is data, not instructions
+  - node: finalize
+    does: "schema-validate, ground (citations ⊆ retrieved ids), scrub egress PII"
+    tools: []
+    controls: [D-002, D-012, D-005]  # schema-valid · grounded-or-capped · egress PII redaction
+
+tools_used:
+  read:   [search_kb]
+  action: []
+
+human_gate:
+  point: none
+  why: "the read path has no side effect; the agent answers, it does not act (PATTERNS.md §4 'Read / answer')"

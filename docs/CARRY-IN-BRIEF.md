@@ -49,6 +49,7 @@ Only these four change; graph/guards/authz/approval/eval-gate/telemetry stay unt
 | MCP publishes READ tools only (D-025) | `agent/mcp_server.py` |
 | governance ↔ tests ↔ contracts | `MANIFEST.md` · `MASTERSCHEMA.md` · `update.py` |
 | **profile the corpus first** | `python -m tools.data_triage <file> --clean` |
+| workflow method (patterns + determination) | `workflows/PATTERNS.md`; declare flows in `workflows/*.yaml` (template in `workflows/templates/`) |
 | paste-and-adapt starters | `snippets/` (see `snippets/README.md`) |
 
 ## 6 · What's REAL vs demonstrated (never overclaim)
@@ -75,22 +76,28 @@ registry + the Braintrust bake-off shell (`scripts/model_bakeoff.sh`) — add th
   `eval_cases`, `telemetry_span`) — paste-and-adapt for the 4-slot fill.
 - **KIT-2B — cold-start.** A verified 5-minute README (clone → venv → install → `make demo`), a graceful
   no-credential message (never a traceback), and `make setup` (venv + install in one).
-- **KIT-3 — the showcase generators.** `make showcase` (`python -m presentation.build_all`) builds a 12-stop
-  showcase and prints a **completion matrix**; unfilled stops render honest **"pending — run X"** placeholders,
-  never fakes. Data contract in `docs/SHOWCASE-DATA.md`.
+- **KIT-3 — the showcase generators.** `make showcase` (`python -m presentation.build_all`) builds the
+  **13-stop** showcase and prints a **completion matrix**; unfilled stops render honest **"pending — run X"**
+  placeholders, never fakes. Data contract in `docs/SHOWCASE-DATA.md`. Stop 13 **`/workflows`** leads with the
+  **determination method** (`workflows/PATTERNS.md` — is the path known → workflow; the 5 patterns;
+  controls-from-risk-per-step) and renders the flows declared in `workflows/*.yaml` (frame ships four; add the
+  domain's from `workflows/templates/`). `/audit` + `/evals` **drill down** to real per-layer rows / per-case
+  scores / xfail residuals; the hub leads with the **6-scenario governance panel** (verdicts from a real
+  `scripts/run_all.sh --scenarios` run, pending until then).
 
 **Fill workflow:** land on the problem → **profile the corpus** (data-triage) → **fill the 4 slots** (use
 `snippets/`) → **red-first bug** (new `D-###`) → **`make showcase`** → **freeze** (`make check` green on disk).
 
-## 8 · Last-verified baseline — 2026-08-24 (fresh bare clone of `template-skeleton` @ `e6e97f9`)
+## 8 · Last-verified baseline — 2026-08-24 (`template-skeleton`, workflows/13-stop framework landed)
 Run these on a fresh clone to confirm the kit is intact. Real results captured today:
 
 | Check | Command | Result |
 |---|---|---|
-| gate | `python update.py --check` | **42 passed**, 15 MANIFEST rows, no drift |
-| lint | `make lint` (ruff + mypy) | ruff **All checks passed**; mypy **Success: no issues in 50 files** |
-| offline tests (no key) | `make check` | same **42 passed** — needs no API key |
-| showcase | `make showcase` | **4 filled · 7 placeholder · 0 error · 2 static** (placeholders honest) |
-| leak scan | `git grep -Ei "jaswant\|meridian\|reset_access\|interview"` | **2 hits, both benign** — `LICENSE` copyright + the `.gitignore` line that *protects* the private canon; **no domain/tool-name leaks** |
+| gate | `python update.py --check` | **50 passed**, 15 MANIFEST rows, no drift |
+| lint | `make lint` (ruff + mypy) | ruff **All checks passed**; mypy **Success: no issues in 51 files** |
+| offline tests (no key) | `make check` | same **50 passed** — needs no API key |
+| showcase | `make showcase` | **5 filled · 7 placeholder · 0 error · 2 static** across all 13 stops (placeholders honest) |
+| leak scan (IT-ops domain) | `git grep -Ei "meridian\|reset_access\|interview"` | **0 hits** — no IT-ops domain/tool-name leaked; only method/framework/generators are ported |
+| leak scan (author refs) | `git grep -Ei "jaswant"` | benign — `LICENSE` copyright, `.gitignore` protecting the private canon, and the reference-build provenance note in §6 (author/owner, not domain data) |
 
 If any of these drifts from the above, something regressed — investigate before relying on the kit.

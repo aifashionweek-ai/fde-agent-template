@@ -161,6 +161,9 @@ def data(): return _serve_html(_PRES / "data.html", "python -m presentation.buil
 @app.get("/runnable", response_class=HTMLResponse, include_in_schema=False)
 def runnable(): return _serve_html(_PRES / "runnable.html", "python -m presentation.build_runnable")
 
+@app.get("/workflows", response_class=HTMLResponse, include_in_schema=False)
+def workflows(): return _serve_html(_PRES / "workflows.html", "python -m presentation.build_workflows")
+
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")
 def contract(): return AgentOutput.model_json_schema()

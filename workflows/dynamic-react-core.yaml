@@ -1,0 +1,45 @@
+# Workflow · dynamic-react-core   (FRAME flow — the ReAct core the others wrap)
+# Real flow (agent/graph.py) → its classification (PATTERNS.md) → per-step controls (MANIFEST).
+
+name: dynamic-react-core
+title: "Dynamic ReAct core — plan · act · observe · adjust, bounded"
+business_request: >
+  The general case: a request whose resolution path is NOT known ahead of time. The agent plans, calls a
+  tool, observes the result, and decides the next step, looping until it can answer or must propose an
+  action. read-answer and gated-action are this core with the path pinned down.
+
+pattern: dynamic-agent            # the agent axis of PATTERNS.md §1 (NOT one of the 5 workflow patterns)
+pattern_note: "bounded ReAct loop; routing (route_after_act) dispatches each turn — PATTERNS.md §4"
+pattern_source: workflows/PATTERNS.md
+determination: >
+  The path DEPENDS on findings (PATTERNS.md §3a→§3c): the model acts, observes the tool result, and
+  adjusts — not a fixed sequence. Because it's dynamic it must be BOUNDED: a step/tool budget and full
+  tracing are non-negotiable (§3d for a dynamic loop).
+
+graph_flow: "plan → act ⇄ tools (route_after_act each turn → tools | approval | finalize), bounded by budget"
+
+steps:
+  - node: plan
+    does: "the model plans the next move from the current state"
+    tools: []
+    controls: [D-001]                      # must terminate / budget breach is a result
+  - node: act
+    does: "the model chooses a tool call or an answer; route_after_act dispatches by the TYPE of proposal (routing)"
+    tools: []
+    controls: [D-003]                      # allowlisted tools only; unknown tool = hard reject
+  - node: tools
+    does: "run the chosen tool, observe, loop back to act; a READ tool runs inline, an ACTION tool is routed to approval, never auto-executed"
+    tools: [search_kb]
+    controls: [D-011, D-033, D-005, D-004] # read tools are tenant/clearance-scoped + injection-inert; any action tool goes through the HITL interrupt
+  - node: "loop bound + trace"
+    does: "the loop cannot run away (budget) and every node emits a span"
+    tools: []
+    controls: [D-001, D-044]               # terminate / budget · one span per node (MODEL vs CODE)
+
+tools_used:
+  read:   [search_kb]
+  action: [submit_action]                  # reachable only via the approval node (see gated-action.yaml)
+
+human_gate:
+  point: "inherited — a proposed side effect routes to the approval node (see gated-action.yaml)"
+  why: "the read-only loop needs no gate; the moment the loop proposes an action it becomes the gated-action path"
