@@ -50,4 +50,5 @@ SERVED_PAGES = {
     "/a2a":       "presentation/a2a.html",
     "/signal":    "presentation/signal.html",
     "/runnable":  "presentation/runnable.html",
+    "/workflows": "presentation/workflows.html",
 }

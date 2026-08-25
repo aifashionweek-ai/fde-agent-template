@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FDE Agent — workflows &amp; patterns</title>
+<style>
+  /* House style — self-contained (no external links). Shared type system: Space Grotesk + JetBrains Mono. */
+  :root { --ink:#1a1a2e; --mut:#6b7280; --line:#e5e7eb; --accent:#4338ca; --bg:#fafafa;
+          --sans:'Space Grotesk',-apple-system,"Segoe UI",Roboto,sans-serif;
+          --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.6 var(--sans); color:var(--ink);
+         background:linear-gradient(180deg,#f4f4fb,#fafafa); }
+  main { max-width:860px; margin:0 auto; padding:40px 18px 90px; }
+  h1 { font-size:25px; margin:0 0 4px; } .sub { color:var(--mut); margin-bottom:22px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); margin:30px 0 10px; }
+  .thesis { background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent);
+            border-radius:10px; padding:14px 16px; margin-bottom:8px; font-size:14.5px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:12px 0; }
+  .lead { border-left:4px solid var(--accent); }
+  .det ol { margin:6px 0 2px; padding-left:20px; } .det li { margin:5px 0; }
+  .det b { color:var(--ink); }
+  code, .mono { font-family:var(--mono); font-size:12.5px; }
+  .kbd { background:#eef2ff; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-family:var(--mono); font-size:12px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th { text-align:left; color:var(--mut); font-weight:600; border-bottom:1px solid var(--line); padding:7px 8px; }
+  td { border-bottom:1px solid var(--line); padding:8px; vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  .chip { display:inline-block; font-family:var(--mono); font-size:11px; font-weight:700; padding:2px 8px;
+          border-radius:6px; background:#eef2ff; color:var(--accent); margin:2px 3px 2px 0; white-space:nowrap; }
+  .chip.read { background:#f0fdf4; color:#166534; } .chip.action { background:#fffbeb; color:#b45309; }
+  .chip.dr { background:#f5f3ff; color:#6d28d9; }
+  .wf-h { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:2px; }
+  .wf-t { font-weight:700; font-size:16px; }
+  .pat { display:inline-block; font-family:var(--mono); font-size:11px; font-weight:700; padding:2px 9px;
+         border-radius:999px; background:var(--accent); color:#fff; }
+  .req { color:var(--mut); font-size:13.5px; margin:4px 0 8px; }
+  .why { background:#f7f7fc; border:1px solid var(--line); border-radius:8px; padding:8px 11px; font-size:13px; margin:0 0 10px; }
+  .why b { color:var(--accent); }
+  .node { font-family:var(--mono); font-size:12px; font-weight:700; color:var(--ink); white-space:nowrap; }
+  .gate { margin-top:10px; padding:9px 12px; border-radius:8px; font-size:13px;
+          background:#fffbeb; border:1px solid #fcd34d; color:#7c2d12; }
+  .gate.none { background:#f0fdf4; border-color:#bbf7d0; color:#166534; }
+  .foot { color:var(--mut); font-size:12.5px; margin-top:26px; }
+  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+  .ptbl td { font-size:13px; } .ptbl .p { font-weight:700; white-space:nowrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Workflows &amp; patterns</h1>
+  <div class="sub">How a new enterprise problem is decomposed into a workflow, then given exactly the
+    controls its worst case demands. Every flow below is real in <code>agent/graph.py</code>; the
+    framing is <code>workflows/PATTERNS.md</code>.</div>
+
+  <div class="thesis"><b>The two axes.</b> The <b>shape</b> comes from one question — <i>is the path
+    known before we start?</i> The <b>controls</b> come from another — <i>what must not go wrong at
+    this step?</i> Shape is a design choice; controls are non-negotiable per the step's risk.</div>
+
+  <!-- LEAD: the determination method (workflows/PATTERNS.md §3) -->
+  <h2>The determination method — how the pattern was chosen</h2>
+  <div class="card lead det">
+    <ol>
+      <li><b>Is the path known before starting, or does it depend on findings?</b>
+        Known ahead → it's a <b>workflow</b> (go to 2). Depends on what you discover mid-task →
+        it's a <b>dynamic agent</b> (go to 3).</li>
+      <li><b>If the path is known — what shape?</b> One thing after another → <b>prompt-chaining</b>.
+        It splits by request <i>type</i> → <b>routing</b>. Independent pieces, no ordering →
+        <b>parallelization</b> (for speed, or vote for reliability).</li>
+      <li><b>If the path is dynamic — how does it progress?</b> Sub-tasks it can't enumerate up front,
+        farmed out and reassembled → <b>orchestrator-workers</b>. A draft improved against a
+        checkable standard → <b>evaluator-optimizer</b>.</li>
+      <li><b>Then, per step: "what must-not-go-wrong here?"</b> — that answer attaches the tools and
+        controls. A step that <b>acts</b> → an <b>approval gate</b> (HITL) + deterministic authz.
+        A step that <b>retrieves</b> customer data → <b>tenant/clearance filter before ranking</b> +
+        injection-inert. A step that <b>answers</b> → <b>grounding</b> + egress PII redaction.</li>
+    </ol>
+    <div class="why" style="margin:8px 0 0"><b>Plain statement:</b> steps&nbsp;1–3 give the
+      <b>shape</b>; step&nbsp;4 (risk-per-step) gives the <b>controls</b>. Decompose into a workflow,
+      then give each step exactly the guards its worst case demands — nothing more, nothing less.</div>
+  </div>
+
+  <h2>The five canonical patterns</h2>
+  <div class="card">
+    <table class="ptbl">
+      <thead><tr><th>Pattern</th><th>One line</th><th>Use when</th></tr></thead>
+      <tbody>
+        <tr><td class="p">prompt-chaining</td><td>fixed ordered steps, each feeds the next</td><td>the path is known &amp; linear</td></tr>
+        <tr><td class="p">routing</td><td>classify the input, send it to the right path</td><td>request types differ</td></tr>
+        <tr><td class="p">parallelization</td><td>run independent subtasks at once, then combine</td><td>speed, or cross-checking / voting</td></tr>
+        <tr><td class="p">orchestrator-workers</td><td>a lead decomposes, delegates, assembles</td><td>subtasks aren't known until runtime</td></tr>
+        <tr><td class="p">evaluator-optimizer</td><td>a producer + a critic loop to a standard</td><td>quality is iterative / checkable</td></tr>
+      </tbody>
+    </table>
+    <div class="req" style="margin:8px 0 0">A dynamic <b>agent</b> (ReAct) is the other axis (PATTERNS.md §1):
+      the path is determined at runtime — the model plans, acts, observes, and adjusts, bounded by budgets and traces.</div>
+  </div>
+
+  <h2>This agent's real workflows</h2>
+  <div id="wf"></div>
+
+  <div class="foot">Rendered from the same facts as <code>workflows/*.yaml</code> (validated by
+    <code>tests/test_workflows.py</code>). See also <a href="/a2a">/a2a</a> ·
+    <a href="/audit">/audit</a> · <a href="/hub">&larr; back to hub</a>.</div>
+</main>
+
+<script>
+// Mirrors workflows/*.yaml exactly. Every node is real (agent/graph.py), every tool is in
+// agent/tool_registry.json, every D-row is in MANIFEST.md.
+const WF = [
+  {
+    name:"read-answer", title:"Policy / access read — answer from tenant-scoped runbooks",
+    pattern:"prompt-chaining", note:"",
+    request:"An employee asks a policy / access / VPN / HR question. The agent answers from the tenant-scoped corpus, citing only what it retrieved. Nothing changes state.",
+    why:"The path is known and linear (§3a→§3b): guard-scrub → plan → retrieve → answer → ground. A retrieval call is a bounded read sub-step, not a branch.",
+    steps:[
+      {node:"guard_input", does:"scrub input PII, detect prompt-injection, recall memory", tools:[], dr:["D-005"]},
+      {node:"plan", does:"model plans the read; proposes no side effect", tools:[], dr:["D-001","D-007"]},
+      {node:"act ⇄ tools", does:"retrieve / look up / recall / calculate", tools:[["search_policy","r"],["lookup_employee","r"],["recall_memory","r"],["calculate","r"]], dr:["D-011","D-010","D-033","D-043"]},
+      {node:"finalize", does:"schema-validate, ground (citations ⊆ retrieved ids), egress PII scrub", tools:[], dr:["D-002","D-012","D-027"]},
+    ],
+    gate:"none", gateWhy:"the read path has no side effect — the agent answers, it does not act."
+  },
+  {
+    name:"gated-action", title:"Side-effecting request — agent proposes, human disposes",
+    pattern:"evaluator-optimizer", note:"gate flavor + chaining",
+    request:"An employee asks the agent to DO something with a blast radius — reset access, file a ticket, provision a resource. Only a human's approval, bound to the exact proposal, lets it execute.",
+    why:"The acting step's must-not-go-wrong is blast radius (§3d): the human is the evaluator — agent proposes, human disposes; only a hash-matched call executes.",
+    steps:[
+      {node:"guard_input", does:"scrub input PII, detect injection, recall memory", tools:[], dr:["D-005"]},
+      {node:"plan", does:"model plans; may decide an action is needed", tools:[], dr:["D-001","D-007"]},
+      {node:"act", does:"model PROPOSES a side-effect call; route_after_act → approval", tools:[["reset_access","a"],["create_ticket","a"],["provision_resource","a"],["remember","a"],["escalate_to_human","a"]], dr:["D-003","D-004"]},
+      {node:"approval", does:"HITL interrupt — authz runs FIRST (unauthorizable denied pre-gate), then the human approves the proposal_hash they saw", tools:[], dr:["D-045","D-033","D-004","D-034","D-038"]},
+      {node:"tools", does:"execute ONLY an approved hash; recompute from actual args, REFUSE if changed; replay is idempotent", tools:[["reset_access","a"],["create_ticket","a"],["provision_resource","a"],["remember","a"],["escalate_to_human","a"]], dr:["D-034","D-038"]},
+      {node:"finalize", does:"schema-validate, ground, egress PII scrub", tools:[], dr:["D-002","D-012","D-027"]},
+    ],
+    gate:"approval", gateWhy:"every side effect is human-approved; an unauthorized action never reaches the human — it dies at authz pre-gate (D-045), and approval binds to the exact proposal_hash (D-034/D-038)."
+  },
+  {
+    name:"a2a", title:"Agent-to-agent — the human gate propagates across the boundary",
+    pattern:"prompt-chaining", note:"across a boundary + propagated gate",
+    request:"Another agent calls this agent over HTTP to get a task done. Any side effect the callee proposes STILL requires human approval — even though the caller has no approval authority of its own.",
+    why:"The caller's steps are known and linear (§3b), but it has no approval authority: the HITL gate rides across the A2A boundary (§3d) — the interrupt propagates and only the caller's approval_channel can release it (abstain = deny).",
+    steps:[
+      {node:"POST /run (callee)", does:"callee runs its governed graph; a side-effect proposal raises an interrupt returned to the caller", tools:[["search_policy","r"],["reset_access","a"],["create_ticket","a"],["provision_resource","a"],["remember","a"],["escalate_to_human","a"]], dr:["D-040","D-038"]},
+      {node:"interrupt (boundary)", does:"caller has no approval authority; its only release path is its approval_channel; abstain = deny (fail closed)", tools:[], dr:["D-040","D-045","D-033"]},
+      {node:"POST /approve", does:"approve by echoing exactly the SEEN hashes; a mutated call is refused at execute", tools:[], dr:["D-038","D-034"]},
+    ],
+    gate:"callee approval → caller's channel", gateWhy:"even an agent-initiated side effect hits the human gate; the caller cannot self-release. The governed graph is deliberately NOT exposed over MCP (no approval channel over stdio; D-025/D-040)."
+  },
+  {
+    name:"dynamic-react-core", title:"Dynamic ReAct core — plan · act · observe · adjust, bounded",
+    pattern:"dynamic-agent", note:"the agent axis (PATTERNS.md §1); routing dispatches each turn",
+    request:"The general case: a request whose resolution path is NOT known ahead of time. read-answer and gated-action are this core with the path pinned down.",
+    why:"The path DEPENDS on findings (§3a→§3c): the model acts, observes, and adjusts — not a fixed sequence. Because it's dynamic it must be BOUNDED (budget + tracing).",
+    steps:[
+      {node:"plan", does:"model plans the next move from current state", tools:[], dr:["D-001","D-007"]},
+      {node:"act", does:"model chooses a tool call or an answer; route_after_act dispatches by proposal TYPE (routing)", tools:[], dr:["D-003"]},
+      {node:"tools", does:"run tool, observe, loop; a READ tool runs inline, an ACTION tool routes to approval — never auto-executed", tools:[["search_policy","r"],["lookup_employee","r"],["recall_memory","r"],["calculate","r"]], dr:["D-011","D-010","D-033","D-043","D-004"]},
+      {node:"loop bound + trace", does:"cannot run away (recursion_limit + budget); every node emits a span (MODEL vs CODE)", tools:[], dr:["D-001","D-007","D-006","D-044"]},
+    ],
+    gate:"inherited → approval", gateWhy:"the read-only loop needs no gate; the moment it proposes an action it becomes the gated-action path."
+  },
+];
+
+const el = (t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
+const root = document.getElementById("wf");
+for (const w of WF) {
+  const card = el("div","card");
+  const head = el("div","wf-h");
+  head.appendChild(el("span","wf-t", w.title));
+  head.appendChild(el("span","pat", w.pattern));
+  if (w.note) head.appendChild(el("span","req", "· "+w.note));
+  card.appendChild(head);
+  card.appendChild(el("div","req", "<b>Business request:</b> "+w.request));
+  card.appendChild(el("div","why", "<b>Why this pattern:</b> "+w.why));
+
+  const tbl = el("table");
+  tbl.innerHTML = "<thead><tr><th style='width:150px'>step (node)</th><th>what it does</th><th style='width:210px'>tools</th><th style='width:150px'>controls</th></tr></thead>";
+  const tb = el("tbody");
+  for (const s of w.steps) {
+    const tr = el("tr");
+    tr.appendChild(el("td",null,"<span class='node'>"+s.node+"</span>"));
+    tr.appendChild(el("td",null,s.does));
+    const tc = el("td");
+    if (!s.tools.length) tc.innerHTML = "<span class='mono' style='color:#9ca3af'>—</span>";
+    else s.tools.forEach(([n,k])=>tc.appendChild(el("span","chip "+(k==="r"?"read":"action"),n)));
+    tr.appendChild(tc);
+    const dc = el("td");
+    s.dr.forEach(d=>dc.appendChild(el("span","chip dr",d)));
+    tr.appendChild(dc);
+    tb.appendChild(tr);
+  }
+  tbl.appendChild(tb); card.appendChild(tbl);
+
+  const g = el("div","gate"+(w.gate==="none"?" none":""));
+  g.innerHTML = "<b>Human gate:</b> "+ (w.gate==="none"?"none":"<code>"+w.gate+"</code>") +" — "+w.gateWhy;
+  card.appendChild(g);
+  root.appendChild(card);
+}
+</script>
+</body>
+</html>

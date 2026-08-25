@@ -1,0 +1,47 @@
+# Workflow · read-answer
+# Declarative map of a REAL flow in agent/graph.py to its pattern (workflows/PATTERNS.md) and its
+# per-step controls (MANIFEST D-rows). Nothing here is invented: every `node` is a real graph node,
+# every tool is in agent/tool_registry.json, every control is a D-### row in MANIFEST.md.
+# Pattern + determination are quoted from PATTERNS.md so this file can't drift from the framing.
+
+name: read-answer
+title: "Policy / access read — answer from tenant-scoped runbooks"
+business_request: >
+  An employee asks a policy, access, VPN, HR or finance question. The agent answers from the
+  tenant-scoped corpus, citing only what it actually retrieved. Nothing changes state, so no
+  human gate fires — governance engages only when something CAN change.
+
+pattern: prompt-chaining          # one of the 5 canonical patterns (PATTERNS.md §2)
+pattern_source: workflows/PATTERNS.md
+determination: >
+  The path is known before starting and linear (PATTERNS.md §3a→§3b): guard-scrub → plan →
+  retrieve → answer → ground. A `search_policy` call is a bounded read sub-step, not a branch —
+  step-risk (§3d) attaches a tenant/clearance filter + grounding, and no approval.
+
+graph_flow: "guard_input → plan → act ⇄ tools → finalize"   # real nodes (agent/graph.py:169-177)
+
+steps:
+  - node: guard_input
+    does: "scrub input PII, run layered prompt-injection detection, recall memory context"
+    tools: []
+    controls: [D-005]                      # input PII redaction + injection detection (layered)
+  - node: plan
+    does: "the model plans the read; it proposes no side effect"
+    tools: []
+    controls: [D-001, D-007]               # bounded: must terminate (recursion_limit) + per-run budget
+  - node: act ⇄ tools
+    does: "retrieve from the tenant-scoped corpus, look up an employee, recall a fact, or calculate"
+    tools: [search_policy, lookup_employee, recall_memory, calculate]
+    controls: [D-011, D-010, D-033, D-043] # routed BEFORE ranking · provenance on every chunk · clearance ceiling + doc-ACL · retrieved text is data, not instructions
+  - node: finalize
+    does: "schema-validate the output, ground it (citations ⊆ retrieved ids), scrub egress PII on every path"
+    tools: []
+    controls: [D-002, D-012, D-027]        # schema-valid · grounded-or-capped · egress PII on EVERY path incl. fallback
+
+tools_used:
+  read:   [search_policy, lookup_employee, recall_memory, calculate]
+  action: []
+
+human_gate:
+  point: none
+  why: "the read path has no side effect; the agent answers, it does not act (PATTERNS.md §4 'Read / answer path')"

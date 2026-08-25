@@ -161,6 +161,10 @@ def signal(): return _serve_html(_REPO / "presentation" / "signal.html",        
 def runnable(): return _serve_html(_REPO / "presentation" / "runnable.html",              # verified 5-min cold-start (static)
                                    "git checkout presentation/")
 
+@app.get("/workflows", response_class=HTMLResponse, include_in_schema=False)
+def workflows(): return _serve_html(_REPO / "presentation" / "workflows.html",            # workflow patterns → real nodes/tools/controls (static)
+                                    "git checkout presentation/")
+
 # A2A: another agent can call POST /run and gets AgentOutput back — same contract, any language.
 @app.get("/contract")
 def contract(): return AgentOutput.model_json_schema()

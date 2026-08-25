@@ -1,0 +1,57 @@
+# Workflow · gated-action
+# Real flow (agent/graph.py) → pattern (workflows/PATTERNS.md) → per-step controls (MANIFEST D-rows).
+# Every node is real, every tool is in agent/tool_registry.json, every control is a D-### row.
+
+name: gated-action
+title: "Side-effecting request — agent proposes, human disposes"
+business_request: >
+  An employee asks the agent to DO something with a blast radius — reset their VPN access, file a
+  ticket, provision a resource. The agent may propose the action, but only a human's approval, bound
+  to the EXACT proposal, lets it execute. "Agent proposes, human disposes."
+
+pattern: evaluator-optimizer      # one of the 5 canonical patterns (PATTERNS.md §2)
+pattern_note: "gate flavor + prompt-chaining — the human is the evaluator, not a model critic"
+pattern_source: workflows/PATTERNS.md
+determination: >
+  The acting step's must-not-go-wrong is blast radius (PATTERNS.md §3d), so the human is the
+  evaluator: the agent proposes, the human disposes against the "authorized AND exactly-what-was-
+  approved" standard; only a hash-matched call executes (unapproved or mutated → REFUSED).
+
+graph_flow: "guard_input → plan → act → approval → tools → finalize"   # real nodes; route_after_act→approval on a side-effect proposal
+
+steps:
+  - node: guard_input
+    does: "scrub input PII, run injection detection, recall memory context"
+    tools: []
+    controls: [D-005]
+  - node: plan
+    does: "the model plans; it may decide an action is needed"
+    tools: []
+    controls: [D-001, D-007]
+  - node: act
+    does: "the model PROPOSES a side-effecting tool call; route_after_act sends it to approval"
+    tools: [reset_access, create_ticket, provision_resource, remember, escalate_to_human]
+    controls: [D-003, D-004]               # allowlisted tools only · side-effect tools require the interrupt
+  - node: approval
+    does: "HITL interrupt — authz runs FIRST (unauthorizable calls denied pre-gate), then the human approves the proposal_hash they were shown"
+    tools: []
+    controls: [D-045, D-033, D-004, D-034, D-038]  # authz BEFORE the gate · deterministic authorize() · HITL interrupt · approval binds to proposal_hash · binds over the wire to what the human SAW
+  - node: tools
+    does: "execute ONLY an approved hash; recompute the hash from actual args and REFUSE if it changed; each executed hash recorded → replay is an idempotent no-op"
+    tools: [reset_access, create_ticket, provision_resource, remember, escalate_to_human]
+    controls: [D-034, D-038]               # recompute-and-refuse-if-changed · execute-once / idempotent replay
+  - node: finalize
+    does: "schema-validate, ground, scrub egress PII"
+    tools: []
+    controls: [D-002, D-012, D-027]
+
+tools_used:
+  read:   [search_policy, lookup_employee, recall_memory, calculate]   # gathering context before proposing
+  action: [reset_access, create_ticket, provision_resource, remember, escalate_to_human]
+
+human_gate:
+  point: approval                # the graph's approval node
+  why: >
+    every side effect is human-approved; an UNAUTHORIZED action never even reaches the human — it
+    dies at the authz layer pre-gate (D-045), so the human is only ever shown allowable proposals,
+    and approval is bound to the exact proposal_hash (D-034/D-038).

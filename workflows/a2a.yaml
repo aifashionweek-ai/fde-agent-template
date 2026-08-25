@@ -1,0 +1,51 @@
+# Workflow · a2a (agent-to-agent)
+# Real flow (agent/a2a.py + scripts/a2a_demo.py) → pattern (workflows/PATTERNS.md) → controls (MANIFEST).
+# The callee runs the SAME governed graph as gated-action; this file captures what the A2A boundary adds.
+
+name: a2a
+title: "Agent-to-agent — the human gate propagates across the boundary"
+business_request: >
+  Another agent (or an automated caller) calls this agent over HTTP to get a task done. Any side
+  effect the callee proposes STILL requires human approval — even though the calling agent has no
+  approval authority of its own. Governance composes across the boundary.
+
+pattern: prompt-chaining          # one of the 5 canonical patterns (PATTERNS.md §2)
+pattern_note: "across a service boundary + a propagated HITL gate"
+pattern_source: workflows/PATTERNS.md
+determination: >
+  The caller's steps are known and linear (PATTERNS.md §3b), but the caller has NO approval
+  authority: the HITL gate is a control that rides across the A2A boundary (§3d) — the interrupt
+  propagates and only the caller's approval_channel can release it (abstain = deny, fail closed).
+
+graph_flow: >
+  A2ACaller.run_task: POST /run → on `interrupt` hand the proposal to approval_channel →
+  POST /approve echoing the SEEN hashes → repeat ≤ MAX_APPROVAL_ROUNDS.
+  (The callee internally runs guard_input → plan → act → approval → tools → finalize — the gated-action graph.)
+
+steps:
+  - node: "POST /run (callee graph)"
+    does: "the callee runs its governed graph; a side-effect proposal raises an interrupt returned to the caller"
+    tools: [search_policy, lookup_employee, recall_memory, calculate, reset_access, create_ticket, provision_resource, remember, escalate_to_human]
+    controls: [D-040, D-038]               # A2A keeps governance intact · /run returns interrupted with proposal_hashes
+  - node: "interrupt across the boundary"
+    does: "the caller has no approval authority; its ONLY release path is its approval_channel (human console or an explicit policy allowlist); abstain = deny"
+    tools: []
+    controls: [D-040, D-045, D-033]        # interrupt propagates, fail-closed · authz still runs pre-gate · deterministic authorize()
+  - node: "POST /approve (echo SEEN hashes)"
+    does: "the human/channel approves by echoing exactly the hashes it was shown; execution recomputes and refuses a mutated call"
+    tools: []
+    controls: [D-038, D-034]               # binds to what was SEEN · hash recompute-and-refuse
+
+not_exposed_over_mcp:
+  controls: [D-025, D-040]
+  why: >
+    the governed graph is deliberately NOT published over MCP — there is no approval channel over
+    stdio, so it would either hang or force auto-approve. MCP publishes READ tools only (D-025).
+
+tools_used:
+  read:   [search_policy, lookup_employee, recall_memory, calculate]
+  action: [reset_access, create_ticket, provision_resource, remember, escalate_to_human]
+
+human_gate:
+  point: "callee approval node, surfaced to the caller's approval_channel"
+  why: "even an agent-initiated side effect hits the human gate; the caller cannot self-release, and abstain = deny (D-040)"
